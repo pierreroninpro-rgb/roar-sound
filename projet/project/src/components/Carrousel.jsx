@@ -262,7 +262,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const rect = containerRef.current.getBoundingClientRect();
         const center = rect.width / 2;
         const distance = e.clientX - rect.left - center;
-        const maxSpeed = 20;
+        // Limiter la vitesse maximale à partir de 1440px de largeur pour éviter que ça aille trop vite
+        const screenWidth = window.innerWidth;
+        const maxSpeed = screenWidth >= 1440 ? 15 : 20; // Vitesse réduite à 15 pour les écrans >= 1440px
         const deadZone = 50;
 
         if (Math.abs(distance) > deadZone) {
