@@ -996,10 +996,12 @@ export default function VideoList({ onFullscreenChange }) {
 
             {/* Infos vidéo */}
             <div 
-              className="flex flex-col justify-start font-HelveticaNeue font-light flex-shrink-0 text-grey-dark" 
+              className="flex flex-col justify-start font-HelveticaNeue font-light text-grey-dark" 
               style={{ 
                 boxSizing: 'border-box',
-                width: spacing.isMobile ? '100%' : '20.83vw',
+                width: spacing.isMobile ? '100%' : 'auto',
+                flex: spacing.isMobile ? 'none' : '1',
+                minWidth: spacing.isMobile ? 'auto' : '20.83vw',
                 margin: spacing.isMobile ? '18px 18px 0px 18px' : '1.125rem 0px 0px 1.125rem',
                 marginTop: spacing.isMobile ? '1rem' : '1.125rem'
               }}
