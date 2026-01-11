@@ -86,17 +86,17 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
                 }
             } else {
-                // Desktop : dimensions fixes 101px × 180px pour 9 images visibles
+                // Desktop : dimensions fixes 105px × 186px pour 9 images visibles
                 if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
                     // Desktop : dimensions fixes
-                    finalCardWidth = 101; // Largeur fixe de 101px
+                    finalCardWidth = 105; // Largeur fixe de 105px
 
                     // Calculer le gap pour que 9 images soient visibles
-                    // 9 images × 101px = 909px
+                    // 9 images × 105px = 945px
                     // Il faut 8 gaps entre les 9 images
-                    // containerWidth = 9 × 101 + 8 × gap
-                    // gap = (containerWidth - 909) / 8
-                    const totalImagesWidth = 9 * 101; // 909px
+                    // containerWidth = 9 × 105 + 8 × gap
+                    // gap = (containerWidth - 945) / 8
+                    const totalImagesWidth = 9 * 105; // 945px
                     const numberOfGaps = 8; // 8 gaps pour 9 images
                     const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
 
@@ -104,15 +104,15 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     // Si le conteneur est trop petit, utiliser un gap minimum
                     const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
 
-                    // Si le conteneur est vraiment trop petit (moins de 909px), on garde quand même un gap raisonnable
+                    // Si le conteneur est vraiment trop petit (moins de 945px), on garde quand même un gap raisonnable
                     if (calculatedGap < 0) {
-                        console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 101px. Gap ajusté à 20px.`);
+                        console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 105px. Gap ajusté à 20px.`);
                     }
 
                     setDimensions({
                         cardWidth: finalCardWidth,
                         gap: finalGap,
-                        cardHeight: 180 // Hauteur fixe de 180px
+                        cardHeight: 186 // Hauteur fixe de 186px
                     });
                     return; // Sortir de la fonction car on a déjà défini les dimensions
                 } else {
