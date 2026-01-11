@@ -820,7 +820,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Texte PAUSE/PLAY */}
+                        {/* Icône PAUSE/PLAY */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -850,14 +850,20 @@ export default function VideoList({ onFullscreenChange }) {
                             }
                           }}
                           style={{
-                            fontSize: '12px',
-                            color: '#D1D1D1',
                             cursor: 'pointer',
-                            fontFamily: "'Helvetica', 'Arial', sans-serif",
-                            userSelect: 'none'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
                         >
-                          {isPlaying ? 'PAUSE' : 'PLAY'}
+                          <img
+                            src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                            alt={isPlaying ? 'Pause' : 'Play'}
+                            style={{
+                              width: '20px',
+                              height: '20px'
+                            }}
+                          />
                         </div>
 
                         {/* Barre de progression */}
@@ -899,21 +905,27 @@ export default function VideoList({ onFullscreenChange }) {
                           ></div>
                         </div>
 
-                        {/* Texte MUTE/UNMUTE */}
+                        {/* Icône MUTE/UNMUTE */}
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleMute(e);
                           }}
                           style={{
-                            fontSize: '12px',
-                            color: '#D1D1D1',
                             cursor: 'pointer',
-                            fontFamily: "'Helvetica', 'Arial', sans-serif",
-                            userSelect: 'none'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
                         >
-                          {isMuted ? 'UNMUTE' : 'MUTE'}
+                          <img
+                            src={isMuted ? '/images/soundon.png' : '/images/soundoff.png'}
+                            alt={isMuted ? 'Unmute' : 'Mute'}
+                            style={{
+                              width: '36px',
+                              height: '36px'
+                            }}
+                          />
                         </div>
 
                         {/* Bouton Fullscreen */}
@@ -945,46 +957,6 @@ export default function VideoList({ onFullscreenChange }) {
                     )}
                   </div>
 
-                  {/* Play button - Visible seulement quand la vidéo n'est pas en lecture */}
-                  {!isPlaying && (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        // Masquer immédiatement le bouton en définissant isPlaying à true
-                        setIsPlaying(true);
-                        // Lancer la vidéo directement
-                        if (playerRef.current) {
-                          try {
-                            setShowControls(true);
-                            setIsHovering(true);
-                            if (controlsTimeoutRef.current) {
-                              clearTimeout(controlsTimeoutRef.current);
-                            }
-                            await playerRef.current.play();
-                            controlsTimeoutRef.current = setTimeout(() => {
-                              setIsHovering(false);
-                              setShowControls(false);
-                            }, 3000);
-                          } catch (err) {
-                            console.error("Error playing video:", err);
-                            // En cas d'erreur, remettre isPlaying à false
-                            setIsPlaying(false);
-                          }
-                        }
-                      }}
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-transparent border-none cursor-pointer"
-                      style={{
-                        pointerEvents: 'auto',
-                        transition: 'opacity 0.2s ease-in-out'
-                      }}
-                    >
-                      <img
-                        src="/images/play.png"
-                        alt="Play"
-                        className="w-[25px] h-[25px]"
-                      />
-                    </button>
-                  )}
 
                 </>
               ) : (
@@ -1120,7 +1092,7 @@ export default function VideoList({ onFullscreenChange }) {
             onMouseEnter={handleNavbarMouseEnter}
             onMouseLeave={handleNavbarMouseLeave}
           >
-            {/* Texte PAUSE/PLAY */}
+            {/* Icône PAUSE/PLAY */}
             <div
               onClick={async (e) => {
                 e.stopPropagation();
@@ -1150,14 +1122,20 @@ export default function VideoList({ onFullscreenChange }) {
                 }
               }}
               style={{
-                fontSize: '12px',
-                color: '#D1D1D1',
                 cursor: 'pointer',
-                fontFamily: "'Helvetica', 'Arial', sans-serif",
-                userSelect: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {isPlaying ? 'PAUSE' : 'PLAY'}
+              <img
+                src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                alt={isPlaying ? 'Pause' : 'Play'}
+                style={{
+                  width: '20px',
+                  height: '20px'
+                }}
+              />
             </div>
             {/* Barre de progression */}
             <div
@@ -1199,21 +1177,27 @@ export default function VideoList({ onFullscreenChange }) {
               ></div>
             </div>
 
-            {/* Texte MUTE/UNMUTE */}
+            {/* Icône MUTE/UNMUTE */}
             <div
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleMute(e);
               }}
               style={{
-                fontSize: '12px',
-                color: '#D1D1D1',
                 cursor: 'pointer',
-                fontFamily: "'Helvetica', 'Arial', sans-serif",
-                userSelect: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {isMuted ? 'UNMUTE' : 'MUTE'}
+              <img
+                src={isMuted ? '/images/soundon.png' : '/images/soundoff.png'}
+                alt={isMuted ? 'Unmute' : 'Mute'}
+                style={{
+                  width: '36px',
+                  height: '36px'
+                }}
+              />
             </div>
 
           </div>
