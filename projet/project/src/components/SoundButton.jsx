@@ -60,8 +60,16 @@ const SoundButton = ({ videoRef, show }) => {
       <button
         ref={soundButtonRef}
         onClick={handleSoundClick}
-        className="text-lg text-white transition-all duration-300 font-HelveticaNeue block md:mr-[36px] cursor-pointer"
-        style={{ marginBottom: '4.13px' }}
+        className="text-lg text-white font-HelveticaNeue block md:mr-[36px] cursor-pointer"
+        style={{ 
+          marginBottom: '4.13px',
+          transition: 'none',
+          transform: 'none'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '1';
+          e.currentTarget.style.transform = 'none';
+        }}
       >
         <img
           src="/images/soundoff.png"

@@ -25,7 +25,15 @@ const EnterButton = ({ show }) => {
       <button
         ref={enterButtonRef}
         className="font-HelveticaNeue font-[400] text-[16px] md:text-[38px] text-custom-grey cursor-pointer"
-        style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}
+        style={{
+          fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
+          transition: 'none',
+          transform: 'none'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '1';
+          e.currentTarget.style.transform = 'none';
+        }}
         onClick={() => (window.location.href = '/Projects')}
       >
         Enter

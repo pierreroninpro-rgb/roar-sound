@@ -377,13 +377,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     return (
         <div
-            className="w-full relative md:mb-0"
+            className="w-full relative"
             style={{
                 overflow: isMobile ? 'hidden' : 'visible',
                 minHeight: '200px',
                 paddingLeft: isMobile ? '20px' : '0',
                 paddingRight: isMobile ? '20px' : '0',
                 marginTop: isMobile ? '0' : '2px',
+                marginBottom: isMobile ? '0' : '19px', // marginTop (2px) + navbarSpacing (17px)
                 boxSizing: 'border-box'
             }}
         >
