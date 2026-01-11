@@ -20,7 +20,7 @@ const REFERENCE_VALUES = {
     videoSpacing: 25, // Fixe (espacement après la vidéo)
     horizontalMargin: 46, // Fixe
     videoHeight: 392, // Proportionnel - Hauteur du lecteur vidéo
-    bottomMargin: 28 // Marge en bas fixe
+    bottomMargin: 17 // Marge en bas fixe (identique à navbarSpacing pour symétrie)
   }
 };
 
@@ -191,13 +191,18 @@ export default function VideoList({ onFullscreenChange }) {
         descriptionFontSize = baseDescriptionFontSize;
       }
 
+      // En desktop, forcer la marge inférieure à être égale à la marge supérieure de la navbar pour symétrie
+      if (!isMobile && !isTablet) {
+        bottomMarginFixed = refValues.navbarSpacing;
+      }
+
       const newSpacing = {
         navbarSpacing: refValues.navbarSpacing, // Fixe - ne change pas avec l'écran
         videoSpacing: refValues.videoSpacing, // Fixe - ne change pas avec l'écran
         carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile
         horizontalMargin: refValues.horizontalMargin, // Fixe - ne change pas avec l'écran
         videoHeight: videoHeight, // Adaptatif pour remplir l'espace disponible
-        bottomMargin: bottomMarginFixed, // Fixe - marge en bas constante (18px mobile, 28px desktop)
+        bottomMargin: bottomMarginFixed, // Fixe - marge en bas constante (18px mobile, 17px desktop = navbarSpacing)
         isMobile: isMobile, // État mobile pour le rendu
         isTablet: isTablet, // État tablette pour le rendu
         isTabletLarge: isTabletLarge, // État tablette large (7 images) pour le rendu
