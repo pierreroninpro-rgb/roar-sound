@@ -989,7 +989,7 @@ export default function VideoList({ onFullscreenChange }) {
                 {selectedVideo?.title}
               </h3>
               <p
-                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? '' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} mb-[1px] font-style: italic`}
+                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? 'mb-[26px]' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} font-style: italic`}
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.subtitleFontSize}px`,
