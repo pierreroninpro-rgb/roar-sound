@@ -90,7 +90,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
                     // Desktop : dimensions fixes
                     finalCardWidth = 101; // Largeur fixe de 101px
-                    
+
                     // Calculer le gap pour que 9 images soient visibles
                     // 9 images × 101px = 909px
                     // Il faut 8 gaps entre les 9 images
@@ -99,16 +99,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const totalImagesWidth = 9 * 101; // 909px
                     const numberOfGaps = 8; // 8 gaps pour 9 images
                     const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
-                    
+
                     // Utiliser le gap calculé, avec une valeur minimale de sécurité
                     // Si le conteneur est trop petit, utiliser un gap minimum
                     const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
-                    
+
                     // Si le conteneur est vraiment trop petit (moins de 909px), on garde quand même un gap raisonnable
                     if (calculatedGap < 0) {
                         console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 101px. Gap ajusté à 20px.`);
                     }
-                    
+
                     setDimensions({
                         cardWidth: finalCardWidth,
                         gap: finalGap,
@@ -383,7 +383,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 minHeight: '200px',
                 paddingLeft: isMobile ? '20px' : '0',
                 paddingRight: isMobile ? '20px' : '0',
-                marginTop: isMobile ? '0' : '2px',
+                marginTop: isMobile ? '0' : '5px',
                 marginBottom: isMobile ? '0' : '19px', // marginTop (2px) + navbarSpacing (17px)
                 boxSizing: 'border-box'
             }}
@@ -432,7 +432,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 }}
                             />
                             <div
-                                className="text-center font-HelveticaNeue font-light whitespace-nowrap pt-2 text-grey-darker"
+                                className="text-center font-HelveticaNeue font-light whitespace-nowrap text-grey-darker"
                                 style={{
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
