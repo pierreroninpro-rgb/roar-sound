@@ -161,6 +161,9 @@ export default function VideoList({ onFullscreenChange }) {
         }
       }
 
+      // Réduire la hauteur de la vidéo de 15%
+      videoHeight = videoHeight * 0.85;
+
       // Taille de l'icône open responsive (proportionnelle)
       const openIconBaseWidth = 20; // Taille de base sur desktop
       const openIconBaseHeight = 20; // Taille de base sur desktop

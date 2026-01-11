@@ -1,90 +1,83 @@
 [
   {
-    "id": 1,
-    "title": "Polène",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/basket.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Original composition, sound"
+  "id": 1,
+  "title": "Armour X",
+  "url": "https://vimeo.com/1151599838",
+  "thumbnail": "/images/ArmourX.png",
+  "soustitre": "AX HQ Room",
+  "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 2,
-    "title": "Test Video",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/flower.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "public video"
+  "id": 2,
+  "title": "Tiffany & Co.",
+  "url": "https://vimeo.com/1151598583",
+  "thumbnail": "/images/Tiffany.png",
+  "soustitre": "Céleste bluebook 2024 | cover",
+  "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 3,
-    "title": "Your Video",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/grey.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "original video"
+  "id": 3,
+  "title": "Nike",
+  "url": "https://vimeo.com/1151597309",
+  "thumbnail": "/images/Nike.png",
+  "soustitre": "Air Mercurial | cover ",
+  "description": "Original composition, sound design, audio mix"
   },
   {
-    "id": 4,
-    "title": "Video 4",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/hermes1.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 4,
+  "title": "Giveon Rather Be",
+  "url": "https://vimeo.com/1151594994",
+  "thumbnail": "/images/GiveonRatherBe.png",
+  "soustitre": "Rather be",
+  "description": "Sound design, audio mix"
   },
   {
-    "id": 5,
-    "title": "Video 5",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/hermes2.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 5,
+  "title": "Giveon A Letter..",
+  "url": "https://vimeo.com/1151592300",
+  "thumbnail": "/images/GiveonAletter.png",
+  "soustitre": "A letter.. ",
+  "description": "Sound design, audio mix "
   },
   {
-    "id": 6,
-    "title": "Video 6",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/nike.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 6,
+  "title": "Converse",
+  "url": "https://vimeo.com/1151590108",
+  "thumbnail": "/images/Converse.png",
+  "soustitre": "Born 2 Dream. Raised a Champion",
+  "description": "Sound design, audio mix"
+  },
+
+  {
+  "id": 7,
+  "title": "AD Council",
+  "url": "https://vimeo.com/1151588642",
+  "thumbnail": "/images/AdCouncil.png",
+  "soustitre": "Story Unfold",
+  "description": "Original composition, sound design, audio mix"
   },
   {
-    "id": 7,
-    "title": "Video 7",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/nike2.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 8,
+  "title": "Kansas City Chiefs",
+  "url": "https://vimeo.com/1151582681",
+  "thumbnail": "/images/Citychiefs.png",
+  "soustitre": "The Kingdom Heard ‘Round the World",
+  "description": "Original composition, sound design, audio mix"
   },
   {
-    "id": 8,
-    "title": "Video 8",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/nike3.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 9,
+  "title": "Armour X",
+  "url": "https://vimeo.com/1151599838",
+  "thumbnail": "/images/ArmourX.png",
+  "soustitre": "AX HQ Room",
+  "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 9,
-    "title": "Video 9",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/people.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
-  },
-  {
-    "id": 10,
-    "title": "Video 10",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/red.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
-  },
-  {
-    "id": 11,
-    "title": "Video 11",
-    "url": "https://player.vimeo.com/video/1128798629",
-    "thumbnail": "/images/sneakers.png",
-    "soustitre": "Summer 25 Campaign",
-    "description": "Lorem ipsum"
+  "id": 10,
+  "title": "Tiffany & Co.",
+  "url": "https://player.vimeo.com/1128798629",
+  "thumbnail": "/images/Tiffany.png",
+  "soustitre": "Céleste bluebook 2024 | cover",
+  "description": "Original composition, sound design, audio mix "
   }
-]
+  ]

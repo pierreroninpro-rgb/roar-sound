@@ -86,20 +86,51 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
                 }
             } else {
-                // Desktop/Tablet : calcul normal
-                const totalGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
-                const availableWidthForCards = Math.max(0, containerWidth - (totalGaps * BASE_GAP));
-                const uniformCardWidth = availableWidthForCards / visibleItems;
+                // Desktop : dimensions fixes 120px × 213px pour 9 images visibles
+                if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
+                    // Desktop : dimensions fixes
+                    finalCardWidth = 120; // Largeur fixe de 120px
+                    
+                    // Calculer le gap pour que 9 images soient visibles
+                    // 9 images × 120px = 1080px
+                    // Il faut 8 gaps entre les 9 images
+                    // containerWidth = 9 × 120 + 8 × gap
+                    // gap = (containerWidth - 1080) / 8
+                    const totalImagesWidth = 9 * 120; // 1080px
+                    const numberOfGaps = 8; // 8 gaps pour 9 images
+                    const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
+                    
+                    // Utiliser le gap calculé, avec une valeur minimale de sécurité
+                    // Si le conteneur est trop petit, utiliser un gap minimum
+                    const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
+                    
+                    // Si le conteneur est vraiment trop petit (moins de 1080px), on garde quand même un gap raisonnable
+                    if (calculatedGap < 0) {
+                        console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 120px. Gap ajusté à 20px.`);
+                    }
+                    
+                    setDimensions({
+                        cardWidth: finalCardWidth,
+                        gap: finalGap,
+                        cardHeight: 213 // Hauteur fixe de 213px
+                    });
+                    return; // Sortir de la fonction car on a déjà défini les dimensions
+                } else {
+                    // Tablet : calcul normal
+                    const totalGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
+                    const availableWidthForCards = Math.max(0, containerWidth - (totalGaps * BASE_GAP));
+                    const uniformCardWidth = availableWidthForCards / visibleItems;
 
-                finalCardWidth = uniformCardWidth;
+                    finalCardWidth = uniformCardWidth;
 
-                // Limiter les tailles pour éviter les valeurs aberrantes
-                if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
+                    // Limiter les tailles pour éviter les valeurs aberrantes
+                    if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
+                        finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
+                    }
                 }
             }
 
-            // La hauteur reste proportionnelle à la largeur
+            // La hauteur reste proportionnelle à la largeur (sauf pour desktop qui a déjà été défini)
             const aspectRatio = BASE_CARD_HEIGHT / BASE_CARD_WIDTH;
             let finalCardHeight = finalCardWidth * aspectRatio;
 
