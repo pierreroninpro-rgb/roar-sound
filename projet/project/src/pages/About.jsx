@@ -19,7 +19,7 @@ const About = () => {
                 <div className='hidden md:block m-[26px] mt-[0px]'>
                     <p className='mb-[18px]'> <span className='font-medium'>ROAR</span> is a Paris-based studio crafting custom music and sound design for brands, fashion and film.<br></br>
                         Clients insclude Converse, Chieds, Grand Marnier x Future, AD Council etc.</p>
-                    <p>Contact: <br></br>Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roarmusic.com" className="text-grey-dark cursor-pointer">hello@roarmusic.com</a> <br></br><a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" className="text-grey-dark cursor-pointer">@instagram</a></p>
+                    <p>Contact: <br></br>Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roarmusic.com" className="text-grey-dark cursor-pointer">hello@roarmusic.com</a> </p>
                 </div>
             </div>
         </div>

@@ -60,7 +60,7 @@ const SoundButton = ({ videoRef, show }) => {
       <button
         ref={soundButtonRef}
         onClick={handleSoundClick}
-        className="text-lg text-white font-HelveticaNeue block md:mr-[36px] cursor-pointer"
+        className="text-lg text-white font-HelveticaNeue block md:mr-[32px] cursor-pointer"
         style={{ 
           marginBottom: '4.13px',
           transition: 'none',
