@@ -93,22 +93,22 @@ export default function VideoList({ onFullscreenChange }) {
         const carouselWithTitle = 250; // Hauteur approximative du carrousel avec titres (image + titre)
         const baseBottomMargin = refValues.bottomMargin; // Marge de base (28px desktop, 18px mobile)
         const baseCarouselSpacing = refValues.videoSpacing; // Espacement de base (25px desktop, 80px mobile)
-        
+
         // Calculer l'espace vertical disponible après la navbar
         const spaceAfterNavbar = screenHeight - navbarHeight - refValues.navbarSpacing;
-        
+
         // Valeurs minimales pour éviter que les éléments soient trop serrés
         const minBottomMargin = 10;
         const minCarouselSpacing = isTablet ? 0 : 15;
-        
+
         // Calculer l'espace nécessaire pour le carrousel et les marges
         const totalFixedHeight = carouselWithTitle + minBottomMargin + minCarouselSpacing;
         const availableSpaceForMarges = Math.max(0, spaceAfterNavbar - totalFixedHeight);
-        
+
         // Répartir l'espace disponible proportionnellement, en privilégiant légèrement le carouselSpacing
         let adaptiveBottomMargin = minBottomMargin;
         let adaptiveCarouselSpacing = minCarouselSpacing;
-        
+
         if (isTabletLarge) {
           // En tablette large (7 images) : réduire les marges pour libérer de l'espace
           adaptiveCarouselSpacing = Math.max(minCarouselSpacing, baseCarouselSpacing - 18);
@@ -122,7 +122,7 @@ export default function VideoList({ onFullscreenChange }) {
           adaptiveCarouselSpacing = baseCarouselSpacing;
           adaptiveBottomMargin = baseBottomMargin;
         }
-        
+
         // Si l'espace disponible est insuffisant, réduire les marges de manière adaptative
         const requiredHeight = carouselWithTitle + adaptiveCarouselSpacing + adaptiveBottomMargin;
         if (requiredHeight > spaceAfterNavbar) {
@@ -131,7 +131,7 @@ export default function VideoList({ onFullscreenChange }) {
           adaptiveCarouselSpacing = Math.max(minCarouselSpacing, adaptiveCarouselSpacing * reductionRatio);
           adaptiveBottomMargin = Math.max(minBottomMargin, adaptiveBottomMargin * reductionRatio);
         }
-        
+
         carouselSpacing = adaptiveCarouselSpacing;
         bottomMarginFixed = adaptiveBottomMargin;
 
@@ -174,11 +174,11 @@ export default function VideoList({ onFullscreenChange }) {
       const baseTitleFontSize = 20; // 1.25rem = 20px en base
       const baseSubtitleFontSize = 20; // 1.25rem = 20px en base
       const baseDescriptionFontSize = 20; // 1.25rem = 20px en base
-      
+
       let titleFontSize = 12; // Par défaut mobile
       let subtitleFontSize = 12; // Par défaut mobile
       let descriptionFontSize = 12; // Par défaut mobile
-      
+
       if (isTabletLarge || (isTablet && !isTabletLarge)) {
         // Pour tablette (5 et 7 images, 820px-1024px), utiliser scaleRatio pour rendre responsive
         titleFontSize = baseTitleFontSize * scaleRatio;
@@ -995,9 +995,9 @@ export default function VideoList({ onFullscreenChange }) {
             </div>
 
             {/* Infos vidéo */}
-            <div 
-              className="flex flex-col justify-start font-HelveticaNeue font-light text-grey-dark" 
-              style={{ 
+            <div
+              className="flex flex-col justify-start font-HelveticaNeue font-light text-grey-dark"
+              style={{
                 boxSizing: 'border-box',
                 width: spacing.isMobile ? '100%' : 'auto',
                 flex: spacing.isMobile ? 'none' : '1',
@@ -1006,9 +1006,9 @@ export default function VideoList({ onFullscreenChange }) {
                 marginTop: spacing.isMobile ? '1rem' : '1.125rem'
               }}
             >
-              <h3 
-                className={`text-[12px] ${spacing.isMobile ? '' : 'lg:text-[1.25rem] lg:mb-0'} font-[500] mb-[6px]`} 
-                style={{ 
+              <h3
+                className={`text-[12px] ${spacing.isMobile ? '' : 'lg:text-[17px] lg:mb-0'} font-[500] mb-[6px]`}
+                style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.titleFontSize}px`,
                   marginBottom: spacing.isMobile ? undefined : '0'
@@ -1016,20 +1016,20 @@ export default function VideoList({ onFullscreenChange }) {
               >
                 {selectedVideo?.title}
               </h3>
-              <p 
-                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? '' : 'lg:text-[1.25rem] lg:mb-[2.41375rem] lg:mt-[0.75rem]'} mb-[18px] font-style: italic`} 
-                style={{ 
+              <p
+                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? '' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} mb-[1px] font-style: italic`}
+                style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.subtitleFontSize}px`,
-                  marginBottom: spacing.isMobile ? undefined : `${2.41375 * spacing.subtitleFontSize / 20}rem`,
+                  marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 15px)`,
                   marginTop: spacing.isMobile ? undefined : `${0.75 * spacing.subtitleFontSize / 20}rem`
                 }}
               >
                 {selectedVideo?.soustitre}
               </p>
-              <p 
-                className={`text-[12px] font-HelveticaNeue font-[300] ${spacing.isMobile ? '' : 'lg:text-[1.25rem]'} `} 
-                style={{ 
+              <p
+                className={`text-[12px] font-HelveticaNeue font-[300] ${spacing.isMobile ? '' : 'lg:text-[17px]'} `}
+                style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.descriptionFontSize}px`
                 }}

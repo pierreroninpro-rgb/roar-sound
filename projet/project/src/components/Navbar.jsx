@@ -6,10 +6,10 @@ const BASE_WIDTH_DESKTOP = 1440;
 
 const REFERENCE_VALUES = {
   mobile: {
-    horizontalMargin: 15
+    horizontalMargin: 14
   },
   desktop: {
-    horizontalMargin: 46
+    horizontalMargin: 42.5
   }
 };
 
@@ -55,10 +55,12 @@ export default function Navbar() {
         style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}
       >
         {/* ✅ ROAR en font-weight 450 */}
-        <span className="text-[30px] md:text-[50px]" style={{ fontWeight: 450 }}>ROAR </span>
+        <span className="text-[30px] md:text-[50px]" style={{
+          fontWeight: 500
+        }}>ROAR </span>
         <span className="text-[16px] md:text-[32px] font-[400]">music </span>
         <span className="text-[12px] md:text-[24px] font-[400]">& </span>
-        <span className="text-[16px] md:text-[32px] font-[400]">sound</span>
+        <span className="text-[16px] md:text-[32px] font-[400]">sound.</span>
 
       </h1>
 

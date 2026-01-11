@@ -86,34 +86,48 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
                 }
             } else {
-                // Desktop : dimensions fixes 105px × 186px pour 9 images visibles
+                // Desktop : dimensions proportionnelles avec ratio 105/186 pour 9 images visibles
                 if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
-                    // Desktop : dimensions fixes
-                    finalCardWidth = 105; // Largeur fixe de 105px
+                    // Dimensions de référence pour un écran de 1440px
+                    const REFERENCE_SCREEN_WIDTH = 1440;
+                    const REFERENCE_WIDTH = 105;
+                    const REFERENCE_HEIGHT = 186;
+                    const ASPECT_RATIO = REFERENCE_HEIGHT / REFERENCE_WIDTH; // 186/105 = 1.7714...
 
-                    // Calculer le gap pour que 9 images soient visibles
-                    // 9 images × 105px = 945px
-                    // Il faut 8 gaps entre les 9 images
-                    // containerWidth = 9 × 105 + 8 × gap
-                    // gap = (containerWidth - 945) / 8
-                    const totalImagesWidth = 9 * 105; // 945px
-                    const numberOfGaps = 8; // 8 gaps pour 9 images
-                    const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
+                    // Calculer le facteur d'échelle basé sur la largeur de l'écran
+                    const scaleFactor = containerWidth / REFERENCE_SCREEN_WIDTH;
 
-                    // Utiliser le gap calculé, avec une valeur minimale de sécurité
-                    // Si le conteneur est trop petit, utiliser un gap minimum
-                    const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
+                    // Appliquer le facteur d'échelle aux dimensions de référence
+                    finalCardWidth = REFERENCE_WIDTH * scaleFactor;
+                    const scaledCardHeight = REFERENCE_HEIGHT * scaleFactor;
 
-                    // Si le conteneur est vraiment trop petit (moins de 945px), on garde quand même un gap raisonnable
-                    if (calculatedGap < 0) {
-                        console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 105px. Gap ajusté à 20px.`);
+                    // Calculer le gap proportionnel aussi
+                    const REFERENCE_GAP = 70; // Gap de référence (BASE_GAP)
+                    const scaledGap = REFERENCE_GAP * scaleFactor;
+
+                    // Vérifier que 9 images + 8 gaps tiennent dans le conteneur
+                    const totalWidthNeeded = (9 * finalCardWidth) + (8 * scaledGap);
+
+                    // Si ça ne rentre pas, ajuster proportionnellement
+                    if (totalWidthNeeded > containerWidth) {
+                        const adjustmentFactor = containerWidth / totalWidthNeeded;
+                        finalCardWidth = finalCardWidth * adjustmentFactor;
+                        const finalGap = scaledGap * adjustmentFactor;
+                        const finalCardHeight = finalCardWidth * ASPECT_RATIO;
+
+                        setDimensions({
+                            cardWidth: finalCardWidth,
+                            gap: finalGap,
+                            cardHeight: finalCardHeight
+                        });
+                    } else {
+                        // Si ça rentre, utiliser les valeurs calculées
+                        setDimensions({
+                            cardWidth: finalCardWidth,
+                            gap: scaledGap,
+                            cardHeight: scaledCardHeight
+                        });
                     }
-
-                    setDimensions({
-                        cardWidth: finalCardWidth,
-                        gap: finalGap,
-                        cardHeight: 186 // Hauteur fixe de 186px
-                    });
                     return; // Sortir de la fonction car on a déjà défini les dimensions
                 } else {
                     // Tablet : calcul normal
