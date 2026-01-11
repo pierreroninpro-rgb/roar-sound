@@ -421,6 +421,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 bottom: "0px",
                                 zIndex: 50,
                                 willChange: "transform, opacity",
+                                overflow: 'visible'
                             }}
                         >
                             <img
@@ -443,7 +444,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                     paddingBottom: selectedVideo && selectedVideo.id === item.id ? '1px' : '0',
                                     display: 'block',
                                     textAlign: 'center',
-                                    width: '100%'
+                                    position: 'relative',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: 'auto',
+                                    maxWidth: 'none'
                                 }}
                             >
                                 {item.title || item.alt || ""}
