@@ -63,5 +63,21 @@
   "thumbnail": "/images/Citychiefs.png",
   "soustitre": "The Kingdom Heard ‘Round the World",
   "description": "Original composition, sound design, audio mix"
+  },
+  {
+  "id": 9,
+  "title": "Armour X",
+  "url": "https://vimeo.com/1151599838",
+  "thumbnail": "/images/ArmourX.png",
+  "soustitre": "AX HQ Room",
+  "description": "Original composition, sound design, audio mix "
+  },
+  {
+  "id": 10,
+  "title": "Tiffany & Co.",
+  "url": "https://player.vimeo.com/1128798629",
+  "thumbnail": "/images/Tiffany.png",
+  "soustitre": "Céleste bluebook 2024 | cover",
+  "description": "Original composition, sound design, audio mix "
   }
   ]
