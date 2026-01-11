@@ -54,19 +54,19 @@ export default function Navbar() {
         className="font-HelveticaNeue font-[500] text-[16px] md:text-[32px] cursor-pointer"
         style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}
       >
-        {/* ✅ ROAR en Medium */}
-        <span className="text-[30px] md:text-[50px] font-medium">ROAR </span>
+        {/* ✅ ROAR en font-weight 450 */}
+        <span className="text-[30px] md:text-[50px]" style={{ fontWeight: 450 }}>ROAR </span>
         <span className="text-[16px] md:text-[32px] font-[400]">music </span>
         <span className="text-[12px] md:text-[24px] font-[400]">& </span>
         <span className="text-[16px] md:text-[32px] font-[400]">sound</span>
 
       </h1>
 
-      {/* ✅ Info en Medium (pas de font-[950]) */}
+      {/* ✅ Info en font-weight 450 */}
       <h2
         onClick={() => window.location.href = "/About"}
-        className="font-HelveticaNeue font-medium text-[30px] md:text-[50px] cursor-pointer"
-        style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}
+        className="font-HelveticaNeue text-[30px] md:text-[50px] cursor-pointer"
+        style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif", fontWeight: 450 }}
       >
         Info
       </h2>
