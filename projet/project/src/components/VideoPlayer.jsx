@@ -25,7 +25,6 @@ const VideoPlayer = ({ onVideoLoad, videoRef }) => {
     <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
       <iframe
         ref={iframeRef}
-        loading="lazy"
         onLoad={handleLoad}
         src="https://player.vimeo.com/video/1128797324?autoplay=1&loop=1&muted=1&background=1&quality=360p"
         className="absolute top-1/2 left-1/2"
@@ -34,6 +33,7 @@ const VideoPlayer = ({ onVideoLoad, videoRef }) => {
           height: 'max(100vh, 56.25vw)', // Prend la plus grande valeur pour couvrir tout l'écran
           transform: 'translate(-50%, -50%)',
           opacity: 0,
+          backgroundColor: '#F6F6F6', // Fond de la même couleur que le preloader pour éviter le blanc
         }}
         frameBorder="0"
         allow="autoplay; fullscreen; picture-in-picture"

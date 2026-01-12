@@ -21,7 +21,7 @@ const Projects = () => {
 
     return (
         <>
-            {isLoading && <Preloader onComplete={() => setIsLoading(false)} />}
+            {isLoading && <Preloader onComplete={() => setIsLoading(false)} duration={500} />}
             <div className="w-full h-screen scrollbar-hide md:mb-[32px]" style={{ 
                 backgroundColor: '#F6F6F6',
                 overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto',

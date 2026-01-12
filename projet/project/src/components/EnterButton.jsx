@@ -7,13 +7,13 @@ const EnterButton = ({ show }) => {
   useEffect(() => {
     if (show && enterButtonRef.current) {
       // S'assurer que le bouton est initialement invisible
-      gsap.set(enterButtonRef.current, { opacity: 0, y: 20 });
-      // Animer avec le délai
+      gsap.set(enterButtonRef.current, { opacity: 0, y: 0 });
+      // Animer immédiatement sans délai pour éviter la page blanche
       gsap.to(enterButtonRef.current, {
         opacity: 1,
         y: 0,
-        duration: 1,
-        delay: 1.3,
+        duration: 0,
+        delay: 0,
       });
     }
   }, [show]);
@@ -28,11 +28,8 @@ const EnterButton = ({ show }) => {
         style={{
           fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
           transition: 'none',
-          transform: 'none'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '1';
-          e.currentTarget.style.transform = 'none';
+          transform: 'none',
+          pointerEvents: 'auto'
         }}
         onClick={() => (window.location.href = '/Projects')}
       >

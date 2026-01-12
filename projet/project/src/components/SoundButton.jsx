@@ -11,12 +11,12 @@ const SoundButton = ({ videoRef, show }) => {
     if (show && soundButtonRef.current) {
       // S'assurer que le bouton est initialement invisible
       gsap.set(soundButtonRef.current, { opacity: 0, y: -10 });
-      // Animer avec le délai
+      // Animer immédiatement sans délai pour éviter la page blanche
       gsap.to(soundButtonRef.current, {
         opacity: 1,
         y: 0,
-        duration: 1,
-        delay: 1,
+        duration: 0.5,
+        delay: 0,
       });
     }
   }, [show]);
@@ -35,11 +35,7 @@ const SoundButton = ({ videoRef, show }) => {
       setIsMuted(true);
     }
 
-    gsap.fromTo(
-      soundButtonRef.current,
-      { scale: 1.2 },
-      { scale: 1, duration: 0.2, ease: 'power1.out' }
-    );
+    // Animation de scale supprimée pour éviter les effets hover
   };
 
   const handleSoundClick = () => {
@@ -64,11 +60,8 @@ const SoundButton = ({ videoRef, show }) => {
         style={{ 
           marginBottom: '4.13px',
           transition: 'none',
-          transform: 'none'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '1';
-          e.currentTarget.style.transform = 'none';
+          transform: 'none',
+          pointerEvents: 'auto'
         }}
       >
         <img
