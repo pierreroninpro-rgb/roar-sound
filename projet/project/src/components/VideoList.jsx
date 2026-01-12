@@ -85,7 +85,20 @@ export default function VideoList({ onFullscreenChange }) {
       if (isMobile) {
         // Augmenter la hauteur de la vidéo en mobile pour qu'elle soit plus grande
         videoHeight = 220 * scaleRatio; // Augmenté de 154 à 180
-        carouselSpacing = refValues.videoSpacing; // Fixe pour mobile
+        
+        // Calculer l'espace disponible pour adapter l'espacement
+        const navbarHeight = 20 + 60; // margin-top (10px) + margin-bottom (20px) + hauteur navbar approximative
+        const carouselHeight = 141 + 11 + 40; // Image (141px) + margin-top (11px) + titre (40px)
+        const availableSpace = screenHeight - navbarHeight - videoHeight - carouselHeight - refValues.bottomMargin;
+        
+        // Adapter l'espacement pour utiliser l'espace disponible sans laisser trop de vide
+        // Minimum 40px, maximum 80px, ou utiliser l'espace disponible s'il est raisonnable
+        if (availableSpace > 0 && availableSpace < 120) {
+          carouselSpacing = Math.max(40, Math.min(80, availableSpace * 0.6)); // Utiliser 60% de l'espace disponible
+        } else {
+          carouselSpacing = refValues.videoSpacing; // Fixe pour mobile (80px) si beaucoup d'espace
+        }
+        
         bottomMarginFixed = refValues.bottomMargin; // Fixe pour mobile (18px)
       } else {
         // Pour desktop : adapter les espacements pour que tout tienne dans 100vh

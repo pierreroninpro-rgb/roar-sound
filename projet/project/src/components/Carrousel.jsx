@@ -30,7 +30,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const [dimensions, setDimensions] = useState({
         cardWidth: BASE_CARD_WIDTH,
         gap: BASE_GAP,
-        cardHeight: BASE_CARD_HEIGHT
+        cardHeight: BASE_CARD_HEIGHT,
+        containerHeight: BASE_CARD_HEIGHT + 8 + 50 // Hauteur par défaut
     });
     const [isMobile, setIsMobile] = useState(false);
     const [isTablet, setIsTablet] = useState(false);
@@ -74,10 +75,18 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 // Utiliser le gap calculé, avec une valeur minimale de sécurité
                 const finalGap = Math.max(calculatedGap, BASE_GAP_MOBILE);
 
+                // Calculer la hauteur du conteneur en fonction de l'espace disponible
+                // Pour s'assurer que les titres sont toujours visibles sur tous les iPhones
+                const cardHeight = 141; // Hauteur fixe de l'image
+                const marginTop = 11; // Margin-top pour mobile
+                const titleHeight = 40; // Espace pour le titre (augmenté pour éviter la coupure)
+                const containerHeight = cardHeight + marginTop + titleHeight;
+
                 setDimensions({
                     cardWidth: finalCardWidth,
                     gap: finalGap,
-                    cardHeight: 141 // Hauteur fixe de 141px
+                    cardHeight: cardHeight,
+                    containerHeight: containerHeight
                 });
                 return; // Sortir de la fonction car on a déjà défini les dimensions
             } else {
@@ -107,7 +116,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     setDimensions({
                         cardWidth: finalCardWidth,
                         gap: finalGap,
-                        cardHeight: 186 // Hauteur fixe de 186px
+                        cardHeight: 186, // Hauteur fixe de 186px
+                        containerHeight: 186 + 8 + 50 // Image + margin-top + titre
                     });
                     return; // Sortir de la fonction car on a déjà défini les dimensions
                 } else {
@@ -132,7 +142,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             setDimensions({
                 cardWidth: finalCardWidth,
                 gap: mobile ? BASE_GAP_MOBILE : BASE_GAP, // Gap réduit pour mobile, normal pour desktop
-                cardHeight: finalCardHeight
+                cardHeight: finalCardHeight,
+                containerHeight: finalCardHeight + 8 + 50 // Hauteur par défaut pour desktop/tablet
             });
         };
 
@@ -170,8 +181,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     useEffect(() => {
         if (dimensions.cardWidth === 0) return;
 
-        // Calculer totalWidth
+        // Calculer totalWidth une seule fois
         const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+        const cardWidthPlusGap = dimensions.cardWidth + dimensions.gap;
+        const minX = -cardWidthPlusGap;
+        const maxX = totalWidth - dimensions.cardWidth;
+        const halfTotalWidth = totalWidth / 2;
 
         const loop = () => {
             if (!containerRef.current || items.length === 0 || totalWidth === 0) {
@@ -188,34 +203,29 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const currentItem = prev.find((v) => v.id === itemToCenter.id);
                     if (!currentItem) return prev;
 
-                    // Toutes les images ont la même largeur maintenant
-                    const itemWidth = dimensions.cardWidth;
-                    const itemCenter = currentItem.x + itemWidth / 2;
+                    const itemCenter = currentItem.x + dimensions.cardWidth / 2;
                     let distance = center - itemCenter;
 
-                    if (distance > totalWidth / 2) distance -= totalWidth;
-                    if (distance < -totalWidth / 2) distance += totalWidth;
+                    // Optimiser le calcul du loop
+                    if (distance > halfTotalWidth) distance -= totalWidth;
+                    else if (distance < -halfTotalWidth) distance += totalWidth;
 
                     if (Math.abs(distance) < 0.5) {
                         isAutoCentering.current = false;
                         targetSpeed.current = 0;
-
-                        // Ne pas libérer automatiquement - rester centré
-                        // centerPauseTimeout.current = setTimeout(() => {
-                        //   targetItemRef.current = null;
-                        // }, 500);
-
                         return prev;
                     }
 
                     const speed = distance * 0.1;
-
-                    return prev.map((item) => {
-                        let newX = item.x + speed;
-                        if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                        if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
-                        return { ...item, x: newX };
-                    });
+                    // Utiliser une boucle for pour de meilleures performances
+                    const newItems = new Array(prev.length);
+                    for (let i = 0; i < prev.length; i++) {
+                        let newX = prev[i].x + speed;
+                        if (newX < minX) newX += totalWidth;
+                        else if (newX > maxX) newX -= totalWidth;
+                        newItems[i] = { ...prev[i], x: newX };
+                    }
+                    return newItems;
                 });
             }
 
@@ -241,14 +251,17 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     }
 
                     if (speedRef.current !== 0) {
-                        setItems((prev) =>
-                            prev.map((item) => {
-                                let newX = item.x - speedRef.current;
-                                if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                                if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
-                                return { ...item, x: newX };
-                            })
-                        );
+                        setItems((prev) => {
+                            // Utiliser une boucle for pour de meilleures performances
+                            const newItems = new Array(prev.length);
+                            for (let i = 0; i < prev.length; i++) {
+                                let newX = prev[i].x - speedRef.current;
+                                if (newX < minX) newX += totalWidth;
+                                else if (newX > maxX) newX -= totalWidth;
+                                newItems[i] = { ...prev[i], x: newX };
+                            }
+                            return newItems;
+                        });
                     }
                 }
             }
@@ -300,6 +313,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const isDragging = useRef(false);
     const lastMoveTime = useRef(null);
     const velocities = useRef([]); // Stocker les dernières vitesses pour calculer la moyenne
+    const dragAnimationFrame = useRef(null);
+    const itemsPositionsRef = useRef(null); // Référence pour les positions pendant le drag
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
@@ -318,6 +333,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         isDragging.current = true;
         velocities.current = [];
 
+        // Stocker les positions actuelles pour éviter les re-renders inutiles
+        itemsPositionsRef.current = items.map(item => ({ ...item }));
+
         // Arrêter tout mouvement automatique en mobile
         if (isMobile) {
             targetSpeed.current = 0;
@@ -325,40 +343,56 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         }
     };
 
+    const updateItemsPositions = (delta) => {
+        if (!itemsPositionsRef.current) return;
+
+        const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+        const cardWidthPlusGap = dimensions.cardWidth + dimensions.gap;
+        const minX = -cardWidthPlusGap;
+        const maxX = totalWidth - dimensions.cardWidth;
+
+        // Mettre à jour les positions dans la ref de manière optimisée
+        const newPositions = itemsPositionsRef.current.map((item) => {
+            let newX = item.x + delta;
+            // Gérer le loop de manière optimisée
+            if (newX < minX) newX += totalWidth;
+            else if (newX > maxX) newX -= totalWidth;
+            return { ...item, x: newX };
+        });
+
+        itemsPositionsRef.current = newPositions;
+
+        // Mettre à jour l'état une seule fois par frame
+        setItems(newPositions);
+    };
+
     const handleTouchMove = (e) => {
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
         if (isMobile && isDragging.current) {
-            // En mobile : déplacer directement les éléments en suivant le doigt
+            // Annuler l'animation frame précédente si elle existe
+            if (dragAnimationFrame.current) {
+                cancelAnimationFrame(dragAnimationFrame.current);
+            }
+
             const currentX = e.touches[0].clientX;
             const currentTime = Date.now();
             const delta = currentX - lastTouchX.current;
 
-            // Calculer la vitesse pour l'animation fluide
-            if (lastMoveTime.current) {
+            // Calculer la vitesse pour l'animation fluide (simplifié)
+            if (lastMoveTime.current && currentTime - lastMoveTime.current > 0) {
                 const timeDelta = currentTime - lastMoveTime.current;
-                if (timeDelta > 0) {
-                    const velocity = delta / timeDelta; // pixels par milliseconde
-                    velocities.current.push(velocity);
-                    // Garder seulement les 5 dernières vitesses
-                    if (velocities.current.length > 5) {
-                        velocities.current.shift();
-                    }
+                const velocity = delta / timeDelta;
+                velocities.current.push(velocity);
+                // Garder seulement les 3 dernières vitesses pour moins de calculs
+                if (velocities.current.length > 3) {
+                    velocities.current.shift();
                 }
             }
 
-            // Mettre à jour directement les positions des items
-            // Swipe de gauche à droite (delta positif) = carrousel vers la droite (x augmente)
-            // Swipe de droite à gauche (delta négatif) = carrousel vers la gauche (x diminue)
-            setItems((prev) => {
-                const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
-                return prev.map((item) => {
-                    let newX = item.x + delta; // Suivre la direction du swipe
-                    // Gérer le loop
-                    if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                    if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
-                    return { ...item, x: newX };
-                });
+            // Utiliser requestAnimationFrame pour une mise à jour fluide
+            dragAnimationFrame.current = requestAnimationFrame(() => {
+                updateItemsPositions(delta);
             });
 
             lastTouchX.current = currentX;
@@ -372,17 +406,23 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleTouchEnd = () => {
+        // Annuler l'animation frame en cours
+        if (dragAnimationFrame.current) {
+            cancelAnimationFrame(dragAnimationFrame.current);
+            dragAnimationFrame.current = null;
+        }
+
         if (isMobile && isDragging.current) {
             isDragging.current = false;
 
             // Calculer la vitesse moyenne pour l'animation fluide après le swipe
-            if (velocities.current.length > 0 && lastMoveTime.current && touchStartTime.current) {
+            if (velocities.current.length > 0) {
                 const avgVelocity = velocities.current.reduce((a, b) => a + b, 0) / velocities.current.length;
                 // Convertir en pixels par frame (environ 60fps = 16.67ms par frame)
                 const velocityPerFrame = avgVelocity * 16.67;
 
                 // Appliquer une vitesse initiale basée sur le geste pour décélération fluide
-                if (Math.abs(velocityPerFrame) > 0.5) {
+                if (Math.abs(velocityPerFrame) > 0.3) {
                     // Négatif car dans la boucle on fait item.x - speedRef.current
                     targetSpeed.current = -velocityPerFrame;
                     speedRef.current = -velocityPerFrame;
@@ -405,6 +445,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         touchStartTime.current = null;
         lastMoveTime.current = null;
         velocities.current = [];
+        itemsPositionsRef.current = null;
     };
 
     const handleClick = (item) => {
@@ -489,8 +530,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 ref={containerRef}
                 className="relative bg-transparent cursor-pointer"
                 style={{
-                    height: `${dimensions.cardHeight + 8 + 50}px`, // Image + margin-top (8px) + titre (~50px pour s'assurer que les titres sont visibles)
-                    minHeight: '200px',
+                    height: `${dimensions.containerHeight || (dimensions.cardHeight + 8 + 50)}px`, // Image + margin-top + titre (adaptatif en mobile)
+                    minHeight: isMobile ? `${dimensions.cardHeight + 11 + 40}px` : '200px', // En mobile : image + margin-top (11px) + titre (40px)
                     width: '100%',
                     overflow: isMobile ? 'hidden' : 'visible'
                 }}
