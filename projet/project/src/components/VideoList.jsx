@@ -352,7 +352,8 @@ export default function VideoList({ onFullscreenChange }) {
           // Vérifier l'état initial du volume
           try {
             const volume = await playerRef.current.getVolume();
-            setIsMuted(volume === 0);
+            const muted = await playerRef.current.getMuted();
+            setIsMuted(muted || volume === 0);
           } catch (err) {
             console.error("Error getting volume:", err);
           }
@@ -535,6 +536,8 @@ export default function VideoList({ onFullscreenChange }) {
           } else {
             await playerRef.current.play();
             setIsPlaying(true);
+            // Activer le son en mobile après l'interaction utilisateur
+            await activateSoundOnMobile();
             controlsTimeoutRef.current = setTimeout(() => {
               setIsHovering(false);
               setShowControls(false);
@@ -622,6 +625,20 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
+  // Fonction helper pour activer le son en mobile après une interaction utilisateur
+  const activateSoundOnMobile = async () => {
+    const isMobileDevice = window.innerWidth <= 820;
+    if (isMobileDevice && playerRef.current) {
+      try {
+        await playerRef.current.setMuted(false);
+        await playerRef.current.setVolume(1);
+        setIsMuted(false);
+      } catch (err) {
+        console.error("Error unmuting video:", err);
+      }
+    }
+  };
+
   // Gérer le clic sur l'écran pour play/pause
   const handleVideoClick = async () => {
     if (!playerRef.current) return;
@@ -644,20 +661,8 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         await playerRef.current.play();
         setIsPlaying(true);
-        
-        // En mobile, activer automatiquement le son après l'interaction utilisateur
-        // Les navigateurs mobiles bloquent souvent le son même si la vidéo n'est pas explicitement muette
-        const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          try {
-            // Toujours activer le son en mobile après un clic utilisateur
-            await playerRef.current.setMuted(false);
-            await playerRef.current.setVolume(1);
-            setIsMuted(false);
-          } catch (err) {
-            console.error("Error unmuting video:", err);
-          }
-        }
+        // Activer le son en mobile après l'interaction utilisateur
+        await activateSoundOnMobile();
         
         // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
         if (!isHovering) {
@@ -872,6 +877,8 @@ export default function VideoList({ onFullscreenChange }) {
                                     clearTimeout(controlsTimeoutRef.current);
                                   }
                                   await playerRef.current.play();
+                                  // Activer le son en mobile après l'interaction utilisateur
+                                  await activateSoundOnMobile();
                                   controlsTimeoutRef.current = setTimeout(() => {
                                     setIsHovering(false);
                                     setShowControls(false);
@@ -1144,6 +1151,8 @@ export default function VideoList({ onFullscreenChange }) {
                         clearTimeout(controlsTimeoutRef.current);
                       }
                       await playerRef.current.play();
+                      // Activer le son en mobile après l'interaction utilisateur
+                      await activateSoundOnMobile();
                       controlsTimeoutRef.current = setTimeout(() => {
                         setIsHovering(false);
                         setShowControls(false);
