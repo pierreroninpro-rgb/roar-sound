@@ -919,7 +919,7 @@ export default function VideoList({ onFullscreenChange }) {
                           }}
                         >
                           <img
-                            src={isMuted ? '/images/soundon.png' : '/images/soundoff.png'}
+                            src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
                             alt={isMuted ? 'Unmute' : 'Mute'}
                             style={{
                               width: '36px',
@@ -1191,7 +1191,7 @@ export default function VideoList({ onFullscreenChange }) {
               }}
             >
               <img
-                src={isMuted ? '/images/soundon.png' : '/images/soundoff.png'}
+                src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
                 alt={isMuted ? 'Unmute' : 'Mute'}
                 style={{
                   width: '36px',

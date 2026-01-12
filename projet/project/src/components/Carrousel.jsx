@@ -61,30 +61,25 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             let finalCardWidth;
 
             if (mobile) {
-                // Mobile : images plus grandes avec gap réduit
+                // Mobile : dimensions fixes 79px × 141px
+                finalCardWidth = 79; // Largeur fixe de 79px
+
+                // Calculer le gap pour que 3 images soient visibles
                 const mobilePadding = 20; // Espace à gauche et à droite (40px au total)
                 const availableWidth = containerWidth - (2 * mobilePadding); // Largeur disponible moins les marges
-                const totalGaps = 2; // 2 gaps pour 3 images
-                const availableWidthForCards = Math.max(0, availableWidth - (totalGaps * BASE_GAP_MOBILE));
-                const baseCardWidth = availableWidthForCards / 3; // Largeur de base pour 3 images
+                const totalImagesWidth = 3 * 79; // 237px pour 3 images
+                const numberOfGaps = 2; // 2 gaps pour 3 images
+                const calculatedGap = (availableWidth - totalImagesWidth) / numberOfGaps;
 
-                // Augmenter la taille des images (multiplicateur pour les rendre plus grandes)
-                const sizeMultiplier = 1.15; // +15% pour rendre les images plus grandes
-                const scaledCardWidth = baseCardWidth * sizeMultiplier;
+                // Utiliser le gap calculé, avec une valeur minimale de sécurité
+                const finalGap = Math.max(calculatedGap, BASE_GAP_MOBILE);
 
-                // Utiliser cette largeur si elle permet toujours 3 images
-                // Sinon, ajuster pour garantir 3 images
-                const maxWidthFor3 = (availableWidth - (totalGaps * BASE_GAP_MOBILE)) / 3;
-                finalCardWidth = Math.min(scaledCardWidth, maxWidthFor3);
-
-                // Limiter la taille maximale pour éviter que les images soient trop grandes près de 820px
-                const MAX_CARD_WIDTH_MOBILE = 120; // Largeur maximale pour les images en mobile (réduite pour voir les titres)
-                finalCardWidth = Math.min(finalCardWidth, MAX_CARD_WIDTH_MOBILE);
-
-                // S'assurer que la largeur est valide et positive
-                if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
-                }
+                setDimensions({
+                    cardWidth: finalCardWidth,
+                    gap: finalGap,
+                    cardHeight: 141 // Hauteur fixe de 141px
+                });
+                return; // Sortir de la fonction car on a déjà défini les dimensions
             } else {
                 // Desktop : dimensions fixes 105px × 186px pour 9 images visibles
                 if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
