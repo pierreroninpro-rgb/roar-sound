@@ -10,7 +10,7 @@ const SoundButton = ({ videoRef, show }) => {
   useEffect(() => {
     if (show && soundButtonRef.current) {
       // S'assurer que le bouton est initialement invisible
-      gsap.set(soundButtonRef.current, { opacity: 0, y: -10 });
+      gsap.set(soundButtonRef.current, { opacity: 0, y: 0 });
       // Animer immédiatement sans délai pour éviter la page blanche
       gsap.to(soundButtonRef.current, {
         opacity: 1,

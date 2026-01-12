@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Navbar from '../components/Navbar.jsx';
 import Preloader from '../components/Preloader.jsx';
 import VideoPlayer from '../components/VideoPlayer.jsx';
@@ -15,26 +15,24 @@ const Home = () => {
     const [showPreloader, setShowPreloader] = useState(true);
     const isLandscape = useOrientation();
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
-    const startTimeRef = useRef(Date.now());
+
+    useEffect(() => {
+        // Le preloader dure 5 secondes car la vidéo met du temps à charger
+        const timer = setTimeout(() => {
+            setShowPreloader(false);
+            // Afficher la vidéo et le contenu après la disparition du preloader
+            if (videoRef.current) {
+                gsap.set(videoRef.current, { opacity: 1 });
+            }
+            setLoading(false);
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleVideoLoad = () => {
         setVideoReady(true);
-
-        // Calculer le temps écoulé depuis le début
-        const elapsedTime = Date.now() - startTimeRef.current;
-        const minDisplayTime = 1000; // Temps minimum d'affichage du preloader (1 seconde pour Home)
-
-        // Si le chargement est rapide, on attend au moins minDisplayTime
-        // Sinon, on attend juste un peu pour que la vidéo soit prête
-        const remainingTime = elapsedTime < minDisplayTime
-            ? minDisplayTime - elapsedTime
-            : 100; // 100ms supplémentaires si le chargement a pris plus de temps
-
-        setTimeout(() => {
-            setShowPreloader(false);
-            // Afficher le contenu immédiatement après la disparition du preloader
-            setLoading(false);
-        }, remainingTime);
+        // La vidéo est chargée, mais on attend que le preloader se termine (5 secondes)
     };
 
     return (
@@ -43,7 +41,7 @@ const Home = () => {
             overflowX: 'hidden'
         }}>
             {/* Preloader */}
-            {showPreloader && <Preloader onComplete={() => setShowPreloader(false)} duration={800} />}
+            {showPreloader && <Preloader onComplete={() => setShowPreloader(false)} duration={5000} />}
 
             {/* Navbar avec marge top responsive */}
             <div className="relative z-[300] font-HelveticaNeue font-[400] text-custom-grey">
