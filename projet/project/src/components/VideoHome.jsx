@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { gsap } from "gsap";
 import Player from "@vimeo/player";
+import { useOrientation } from "../hooks/useOrientation";
 
 const Enter = () => {
   const overlayRef = useRef(null);
@@ -13,6 +14,8 @@ const Enter = () => {
   const [videoReady, setVideoReady] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showSoundIcon, setShowSoundIcon] = useState(true);
+  const isLandscape = useOrientation();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
 
 
   useEffect(() => {
@@ -82,7 +85,10 @@ const Enter = () => {
   };
 
   return (
-    <div className="relative w-screen h-[100dvh] overflow-hidden scrollbar-hide homet greyh">
+    <div className="relative w-screen h-[100dvh] scrollbar-hide homet greyh" style={{
+      overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto',
+      overflowX: 'hidden'
+    }}>
       {/* ✅ Navbar avec marge top responsive */}
       
       <div className="pt-roar-y-mobile md:pt-roar-y-desktop relative z-[300]">

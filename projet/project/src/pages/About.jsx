@@ -1,10 +1,17 @@
 import React from 'react';
-
 import Navbar from '../components/Navbar.jsx';
+import { useOrientation } from '../hooks/useOrientation';
 
 const About = () => {
+    const isLandscape = useOrientation();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
+
     return (
-        <div className="w-full h-full overflow-hidden scrollbar-hide" style={{ backgroundColor: '#F6F6F6' }}>
+        <div className="w-full h-full scrollbar-hide" style={{ 
+            backgroundColor: '#F6F6F6',
+            overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto',
+            overflowX: 'hidden'
+        }}>
             <div className='text-grey-dark'><Navbar /></div>
 
             <div className='font-HelveticaNeue font-light text-[12px] md:text-[17px] mt-[18px] m-[18px] mt-[0px] text-grey-dark  '>

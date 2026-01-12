@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import Player from "@vimeo/player";
 import Carousel from "./Carrousel.jsx";
+import { useOrientation } from "../hooks/useOrientation";
 
 // Dimensions de référence (comme Figma)
 const BASE_WIDTH_MOBILE = 390;
@@ -33,6 +34,8 @@ export default function VideoList({ onFullscreenChange }) {
   const [isFullscreen, setIsFullscreen] = useState(false); // État pour détecter le plein écran
   const [showControls, setShowControls] = useState(false); // État pour afficher/masquer les contrôles au clic
   const [isHovering, setIsHovering] = useState(false); // État pour détecter le hover
+  const isLandscape = useOrientation();
+  const [isMobile, setIsMobile] = useState(false);
   const [isMuted, setIsMuted] = useState(false); // État pour le son
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const videoRef = useRef(null);
@@ -68,7 +71,9 @@ export default function VideoList({ onFullscreenChange }) {
       const windowWidth = window.innerWidth;
       const containerWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : null;
 
-      const isMobile = screenWidth <= 820; // Même breakpoint que le carrousel
+      const mobileCheck = screenWidth <= 820; // Même breakpoint que le carrousel
+      setIsMobile(mobileCheck);
+      const isMobile = mobileCheck;
       const isTablet = screenWidth > 820 && screenWidth < 1024; // Tablette : entre 820px et 1024px
       const isTabletLarge = screenWidth >= 900 && screenWidth < 1024; // Zone tablette large avec 7 images
 
@@ -702,7 +707,8 @@ export default function VideoList({ onFullscreenChange }) {
       className="w-full max-w-full"
       style={{
         boxSizing: 'border-box',
-        overflow: 'hidden', // Pas de scroll
+        overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto', // Pas de scroll en mobile portrait uniquement
+        overflowX: 'hidden',
         paddingBottom: isFullscreen ? '0' : `${spacing.bottomMargin}px`, // Marge en bas fixe (18px mobile, 28px desktop)
         paddingLeft: isFullscreen ? '0' : undefined,
         paddingRight: isFullscreen ? '0' : undefined,

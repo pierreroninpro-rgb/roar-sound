@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { useOrientation } from "../hooks/useOrientation";
 
 export default function Carousel({ videos, onSelectVideo, selectedVideo, carouselBottomMargin = 60 }) {
     const containerRef = useRef(null);
@@ -35,6 +36,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     });
     const [isMobile, setIsMobile] = useState(false);
     const [isTablet, setIsTablet] = useState(false);
+    const isLandscape = useOrientation();
 
     useEffect(() => {
         const calculateDimensions = () => {
@@ -517,7 +519,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         <div
             className="w-full relative"
             style={{
-                overflow: isMobile ? 'hidden' : 'visible',
+                overflow: (isMobile && !isLandscape) ? 'hidden' : 'visible',
                 minHeight: '200px',
                 paddingLeft: isMobile ? '20px' : '0',
                 paddingRight: isMobile ? '20px' : '0',
@@ -533,7 +535,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     height: `${dimensions.containerHeight || (dimensions.cardHeight + 8 + 50)}px`, // Image + margin-top + titre (adaptatif en mobile)
                     minHeight: isMobile ? `${dimensions.cardHeight + 11 + 40}px` : '200px', // En mobile : image + margin-top (11px) + titre (40px)
                     width: '100%',
-                    overflow: isMobile ? 'hidden' : 'visible'
+                    overflow: (isMobile && !isLandscape) ? 'hidden' : 'visible'
                 }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}

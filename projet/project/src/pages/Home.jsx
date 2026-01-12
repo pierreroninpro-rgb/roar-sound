@@ -5,12 +5,15 @@ import VideoPlayer from '../components/VideoPlayer.jsx';
 import EnterButton from '../components/EnterButton.jsx';
 import SoundButton from '../components/SoundButton.jsx';
 import { gsap } from 'gsap';
+import { useOrientation } from '../hooks/useOrientation';
 
 const Home = () => {
     const overlayRef = useRef(null);
     const videoRef = useRef(null);
     const [loading, setLoading] = useState(true);
     const [videoReady, setVideoReady] = useState(false);
+    const isLandscape = useOrientation();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
 
     const handleVideoLoad = () => {
         setVideoReady(true);
@@ -26,7 +29,10 @@ const Home = () => {
     };
 
     return (
-        <div className="relative w-screen h-[100dvh] overflow-hidden scrollbar-hide ">
+        <div className="relative w-screen h-[100dvh] scrollbar-hide" style={{
+            overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto',
+            overflowX: 'hidden'
+        }}>
             {/* Navbar avec marge top responsive */}
             <div className="relative z-[300] font-HelveticaNeue font-[400] text-custom-grey">
                 <Navbar />
