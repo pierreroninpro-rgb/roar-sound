@@ -17,7 +17,7 @@ const Home = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
 
     useEffect(() => {
-        // Le preloader dure 5 secondes car la vidéo met du temps à charger
+        // Le preloader dure 4 secondes
         const timer = setTimeout(() => {
             setShowPreloader(false);
             // Afficher la vidéo et le contenu après la disparition du preloader
@@ -25,7 +25,7 @@ const Home = () => {
                 gsap.set(videoRef.current, { opacity: 1 });
             }
             setLoading(false);
-        }, 5000);
+        }, 4000);
 
         return () => clearTimeout(timer);
     }, []);
@@ -41,7 +41,7 @@ const Home = () => {
             overflowX: 'hidden'
         }}>
             {/* Preloader */}
-            {showPreloader && <Preloader onComplete={() => setShowPreloader(false)} duration={5000} />}
+            {showPreloader && <Preloader onComplete={() => setShowPreloader(false)} duration={4000} />}
 
             {/* Navbar avec marge top responsive */}
             <div className="relative z-[300] font-HelveticaNeue font-[400] text-custom-grey">
