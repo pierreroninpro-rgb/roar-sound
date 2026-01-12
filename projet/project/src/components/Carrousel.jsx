@@ -219,7 +219,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 });
             }
 
-            if (!isAutoCentering.current && !targetItemRef.current) {
+            // En mobile, ne pas utiliser le système de vitesse automatique
+            if (!isMobile && !isAutoCentering.current && !targetItemRef.current) {
                 speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
 
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
@@ -278,6 +279,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const isDragging = useRef(false);
+    const dragStartX = useRef(0);
+    const dragOffset = useRef(0);
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
@@ -289,20 +293,57 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         touchX.current = e.touches[0].clientX;
         lastTouchX.current = e.touches[0].clientX;
+        dragStartX.current = e.touches[0].clientX;
+        dragOffset.current = 0;
+        isDragging.current = true;
+
+        // Arrêter tout mouvement automatique en mobile
+        if (isMobile) {
+            targetSpeed.current = 0;
+            speedRef.current = 0;
+        }
     };
 
     const handleTouchMove = (e) => {
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
-        const delta = e.touches[0].clientX - lastTouchX.current;
-        // Vitesse augmentée pour mobile (2.5x au lieu de 1.2x)
-        targetSpeed.current = -delta * 2.5;
-        lastTouchX.current = e.touches[0].clientX;
+        if (isMobile && isDragging.current) {
+            // En mobile : déplacer directement les éléments en suivant le doigt
+            const currentX = e.touches[0].clientX;
+            const delta = currentX - lastTouchX.current;
+
+            // Mettre à jour directement les positions des items
+            setItems((prev) => {
+                const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+                return prev.map((item) => {
+                    let newX = item.x - delta; // Inverser pour que le swipe suive naturellement
+                    // Gérer le loop
+                    if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
+                    if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
+                    return { ...item, x: newX };
+                });
+            });
+
+            lastTouchX.current = currentX;
+        } else {
+            // Desktop : comportement original avec vitesse
+            const delta = e.touches[0].clientX - lastTouchX.current;
+            targetSpeed.current = -delta * 2.5;
+            lastTouchX.current = e.touches[0].clientX;
+        }
     };
 
     const handleTouchEnd = () => {
-        // Réinitialiser la vitesse à la fin du touch
-        targetSpeed.current = 0;
+        // En mobile, arrêter le drag et ne pas laisser de mouvement continu
+        if (isMobile) {
+            isDragging.current = false;
+            targetSpeed.current = 0;
+            speedRef.current = 0;
+        } else {
+            // Desktop : réinitialiser la vitesse à la fin du touch
+            targetSpeed.current = 0;
+        }
+
         touchX.current = null;
         lastTouchX.current = null;
     };
