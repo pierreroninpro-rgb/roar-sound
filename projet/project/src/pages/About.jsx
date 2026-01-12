@@ -19,14 +19,14 @@ const About = () => {
                 <div className='block md:hidden'>
                     <p className='mb-[18px]'> <span className='font-medium'>ROAR</span> is a Paris-based studio crafting music and sound design for brands, fashion and film. 
                     Past clients include Converse, Ad Council, Giveon, the Kansas City Chiefs and more. </p>
-                    <p>Contact: <br></br> Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roarmusic.com" className="text-grey-dark hover:underline">hello@roarmusiccom</a> <br></br> </p>
+                    <p>Contact: <br></br> Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roar-sound.com" className="text-grey-dark hover:underline">hello@roar-sound.com</a> <br></br> </p>
                 </div>
 
                 {/* Version Desktop */}
                 <div className='hidden md:block m-[26px] mt-[0px]'>
                     <p className='mb-[18px]'> <span className='font-medium'>ROAR</span> is a Paris-based studio crafting music and sound design for brands, fashion and film. <br></br>
                     Past clients include Converse, Ad Council, Giveon, the Kansas City Chiefs and more. </p>
-                    <p>Contact: <br></br>Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roarmusic.com" className="text-grey-dark cursor-pointer">hello@roarmusic.com</a> </p>
+                    <p>Contact: <br></br>Pierre Ronin, Aristide Rosier <br></br> <a href="mailto:hello@roar-sound.com" className="text-grey-dark cursor-pointer">hello@roar-sound.com</a> </p>
                 </div>
             </div>
         </div>
