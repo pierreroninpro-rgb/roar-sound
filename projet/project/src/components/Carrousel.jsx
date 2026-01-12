@@ -219,21 +219,37 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 });
             }
 
-            // En mobile, ne pas utiliser le système de vitesse automatique
-            if (!isMobile && !isAutoCentering.current && !targetItemRef.current) {
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
+            // Gérer le mouvement automatique (desktop) ou la décélération après swipe (mobile)
+            if (!isAutoCentering.current && !targetItemRef.current) {
+                // En mobile, seulement si on n'est pas en train de drag
+                if (isMobile && isDragging.current) {
+                    // Ne rien faire pendant le drag (le mouvement est géré directement dans handleTouchMove)
+                } else {
+                    // Desktop ou mobile après swipe : appliquer la vitesse avec décélération
+                    if (isMobile && speedRef.current !== 0) {
+                        // En mobile : décélération plus rapide pour un arrêt naturel
+                        speedRef.current *= 0.92; // Réduire de 8% à chaque frame
+                        targetSpeed.current = speedRef.current;
+                    } else {
+                        // Desktop : interpolation douce
+                        speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
+                    }
 
-                if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
+                    if (Math.abs(speedRef.current) < 0.1) {
+                        speedRef.current = 0;
+                        targetSpeed.current = 0;
+                    }
 
-                if (speedRef.current !== 0) {
-                    setItems((prev) =>
-                        prev.map((item) => {
-                            let newX = item.x - speedRef.current;
-                            if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                            if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
-                            return { ...item, x: newX };
-                        })
-                    );
+                    if (speedRef.current !== 0) {
+                        setItems((prev) =>
+                            prev.map((item) => {
+                                let newX = item.x - speedRef.current;
+                                if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
+                                if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
+                                return { ...item, x: newX };
+                            })
+                        );
+                    }
                 }
             }
 
@@ -279,9 +295,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const touchStartTime = useRef(null);
+    const touchStartX = useRef(null);
     const isDragging = useRef(false);
-    const dragStartX = useRef(0);
-    const dragOffset = useRef(0);
+    const lastMoveTime = useRef(null);
+    const velocities = useRef([]); // Stocker les dernières vitesses pour calculer la moyenne
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
@@ -291,11 +309,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
-        touchX.current = e.touches[0].clientX;
-        lastTouchX.current = e.touches[0].clientX;
-        dragStartX.current = e.touches[0].clientX;
-        dragOffset.current = 0;
+        const touch = e.touches[0];
+        touchX.current = touch.clientX;
+        lastTouchX.current = touch.clientX;
+        touchStartX.current = touch.clientX;
+        touchStartTime.current = Date.now();
+        lastMoveTime.current = Date.now();
         isDragging.current = true;
+        velocities.current = [];
 
         // Arrêter tout mouvement automatique en mobile
         if (isMobile) {
@@ -310,13 +331,29 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         if (isMobile && isDragging.current) {
             // En mobile : déplacer directement les éléments en suivant le doigt
             const currentX = e.touches[0].clientX;
+            const currentTime = Date.now();
             const delta = currentX - lastTouchX.current;
 
+            // Calculer la vitesse pour l'animation fluide
+            if (lastMoveTime.current) {
+                const timeDelta = currentTime - lastMoveTime.current;
+                if (timeDelta > 0) {
+                    const velocity = delta / timeDelta; // pixels par milliseconde
+                    velocities.current.push(velocity);
+                    // Garder seulement les 5 dernières vitesses
+                    if (velocities.current.length > 5) {
+                        velocities.current.shift();
+                    }
+                }
+            }
+
             // Mettre à jour directement les positions des items
+            // Swipe de gauche à droite (delta positif) = carrousel vers la droite (x augmente)
+            // Swipe de droite à gauche (delta négatif) = carrousel vers la gauche (x diminue)
             setItems((prev) => {
                 const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
                 return prev.map((item) => {
-                    let newX = item.x - delta; // Inverser pour que le swipe suive naturellement
+                    let newX = item.x + delta; // Suivre la direction du swipe
                     // Gérer le loop
                     if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
                     if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
@@ -325,6 +362,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             });
 
             lastTouchX.current = currentX;
+            lastMoveTime.current = currentTime;
         } else {
             // Desktop : comportement original avec vitesse
             const delta = e.touches[0].clientX - lastTouchX.current;
@@ -334,11 +372,28 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleTouchEnd = () => {
-        // En mobile, arrêter le drag et ne pas laisser de mouvement continu
-        if (isMobile) {
+        if (isMobile && isDragging.current) {
             isDragging.current = false;
-            targetSpeed.current = 0;
-            speedRef.current = 0;
+
+            // Calculer la vitesse moyenne pour l'animation fluide après le swipe
+            if (velocities.current.length > 0 && lastMoveTime.current && touchStartTime.current) {
+                const avgVelocity = velocities.current.reduce((a, b) => a + b, 0) / velocities.current.length;
+                // Convertir en pixels par frame (environ 60fps = 16.67ms par frame)
+                const velocityPerFrame = avgVelocity * 16.67;
+
+                // Appliquer une vitesse initiale basée sur le geste pour décélération fluide
+                if (Math.abs(velocityPerFrame) > 0.5) {
+                    // Négatif car dans la boucle on fait item.x - speedRef.current
+                    targetSpeed.current = -velocityPerFrame;
+                    speedRef.current = -velocityPerFrame;
+                } else {
+                    targetSpeed.current = 0;
+                    speedRef.current = 0;
+                }
+            } else {
+                targetSpeed.current = 0;
+                speedRef.current = 0;
+            }
         } else {
             // Desktop : réinitialiser la vitesse à la fin du touch
             targetSpeed.current = 0;
@@ -346,6 +401,10 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         touchX.current = null;
         lastTouchX.current = null;
+        touchStartX.current = null;
+        touchStartTime.current = null;
+        lastMoveTime.current = null;
+        velocities.current = [];
     };
 
     const handleClick = (item) => {
