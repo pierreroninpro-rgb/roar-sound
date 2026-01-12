@@ -644,6 +644,21 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         await playerRef.current.play();
         setIsPlaying(true);
+        
+        // En mobile, activer automatiquement le son après l'interaction utilisateur
+        // Les navigateurs mobiles bloquent souvent le son même si la vidéo n'est pas explicitement muette
+        const isMobileDevice = window.innerWidth <= 820;
+        if (isMobileDevice) {
+          try {
+            // Toujours activer le son en mobile après un clic utilisateur
+            await playerRef.current.setMuted(false);
+            await playerRef.current.setVolume(1);
+            setIsMuted(false);
+          } catch (err) {
+            console.error("Error unmuting video:", err);
+          }
+        }
+        
         // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
         if (!isHovering) {
           controlsTimeoutRef.current = setTimeout(() => {
