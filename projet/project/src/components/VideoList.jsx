@@ -92,8 +92,8 @@ export default function VideoList({ onFullscreenChange }) {
         videoHeight = 220 * scaleRatio; // Augmenté de 154 à 180
 
         // Utiliser un pourcentage de la hauteur d'écran pour positionner le carrousel au même niveau
-        // sur tous les téléphones (5% de la hauteur d'écran - réduit de 5% pour remonter le carrousel)
-        const carouselSpacingPercent = 0.05; // 5% de la hauteur d'écran (réduit de 10% à 5%)
+        // sur tous les téléphones (8% de la hauteur d'écran - remonté de 3% par rapport à 5%)
+        const carouselSpacingPercent = 0.08; // 8% de la hauteur d'écran (5% + 3% pour descendre le carrousel)
         carouselSpacing = screenHeight * carouselSpacingPercent;
 
         bottomMarginFixed = refValues.bottomMargin; // Fixe pour mobile (18px)
@@ -210,7 +210,7 @@ export default function VideoList({ onFullscreenChange }) {
         navbarSpacing: refValues.navbarSpacing, // Fixe - ne change pas avec l'écran
         videoSpacing: refValues.videoSpacing, // Fixe - ne change pas avec l'écran
         carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile (en px mais calculé en % de screenHeight)
-        carouselSpacingPercent: isMobile ? 0.05 : null, // Pourcentage pour mobile (5% de la hauteur d'écran - réduit de 10% à 5%)
+        carouselSpacingPercent: isMobile ? 0.08 : null, // Pourcentage pour mobile (8% de la hauteur d'écran - 5% + 3% pour descendre)
         horizontalMargin: refValues.horizontalMargin, // Fixe - ne change pas avec l'écran
         videoHeight: videoHeight, // Adaptatif pour remplir l'espace disponible
         bottomMargin: bottomMarginFixed, // Fixe - marge en bas constante (18px mobile, 17px desktop = navbarSpacing)
@@ -1023,11 +1023,11 @@ export default function VideoList({ onFullscreenChange }) {
                 {selectedVideo?.title}
               </h3>
               <p
-                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? 'mb-[24px]' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} font-style: italic`}
+                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? 'mb-[23px]' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} font-style: italic`}
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.subtitleFontSize}px`,
-                  marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 13px)`,
+                  marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 12px)`,
                   marginTop: spacing.isMobile ? undefined : `${0.75 * spacing.subtitleFontSize / 20}rem`
                 }}
               >
@@ -1037,7 +1037,8 @@ export default function VideoList({ onFullscreenChange }) {
                 className={`text-[12px] font-HelveticaNeue font-[300] ${spacing.isMobile ? '' : 'lg:text-[17px]'} `}
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
-                  fontSize: spacing.isMobile ? undefined : `${spacing.descriptionFontSize}px`
+                  fontSize: spacing.isMobile ? undefined : `${spacing.descriptionFontSize}px`,
+                  marginBottom: spacing.isMobile ? '1px' : '1px'
                 }}
               >
                 {selectedVideo?.description}
