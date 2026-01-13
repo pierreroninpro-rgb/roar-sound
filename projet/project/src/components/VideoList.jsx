@@ -190,9 +190,9 @@ export default function VideoList({ onFullscreenChange }) {
       const openIconHeight = isMobile ? openIconBaseHeight * scaleRatio : openIconBaseHeight;
 
       // Tailles de police responsive pour la tablette large (7 images) et tablette normale (5 images)
-      const baseTitleFontSize = 20; // 1.25rem = 20px en base
-      const baseSubtitleFontSize = 20; // 1.25rem = 20px en base
-      const baseDescriptionFontSize = 20; // 1.25rem = 20px en base
+      const baseTitleFontSize = 17; // 17px en base pour desktop
+      const baseSubtitleFontSize = 17; // 17px en base pour desktop
+      const baseDescriptionFontSize = 17; // 17px en base pour desktop
 
       let titleFontSize = 12; // Par défaut mobile
       let subtitleFontSize = 12; // Par défaut mobile
