@@ -90,20 +90,12 @@ export default function VideoList({ onFullscreenChange }) {
       if (isMobile) {
         // Augmenter la hauteur de la vidéo en mobile pour qu'elle soit plus grande
         videoHeight = 220 * scaleRatio; // Augmenté de 154 à 180
-        
-        // Calculer l'espace disponible pour adapter l'espacement
-        const navbarHeight = 20 + 60; // margin-top (10px) + margin-bottom (20px) + hauteur navbar approximative
-        const carouselHeight = 141 + 11 + 40; // Image (141px) + margin-top (11px) + titre (40px)
-        const availableSpace = screenHeight - navbarHeight - videoHeight - carouselHeight - refValues.bottomMargin;
-        
-        // Adapter l'espacement pour utiliser l'espace disponible sans laisser trop de vide
-        // Minimum 40px, maximum 80px, ou utiliser l'espace disponible s'il est raisonnable
-        if (availableSpace > 0 && availableSpace < 120) {
-          carouselSpacing = Math.max(40, Math.min(80, availableSpace * 0.6)); // Utiliser 60% de l'espace disponible
-        } else {
-          carouselSpacing = refValues.videoSpacing; // Fixe pour mobile (80px) si beaucoup d'espace
-        }
-        
+
+        // Utiliser un pourcentage de la hauteur d'écran pour positionner le carrousel au même niveau
+        // sur tous les téléphones (5% de la hauteur d'écran - réduit de 5% pour remonter le carrousel)
+        const carouselSpacingPercent = 0.05; // 5% de la hauteur d'écran (réduit de 10% à 5%)
+        carouselSpacing = screenHeight * carouselSpacingPercent;
+
         bottomMarginFixed = refValues.bottomMargin; // Fixe pour mobile (18px)
       } else {
         // Pour desktop : adapter les espacements pour que tout tienne dans 100vh
@@ -214,10 +206,20 @@ export default function VideoList({ onFullscreenChange }) {
         bottomMarginFixed = refValues.navbarSpacing;
       }
 
+      // Calculer navbarSpacing avec compensation en mobile
+      let finalNavbarSpacing = refValues.navbarSpacing;
+      if (isMobile) {
+        // Ajouter 5vh de compensation pour maintenir la position de la vidéo/navbar
+        // pendant que le carrousel remonte de 5%
+        const navbarSpacingCompensation = screenHeight * 0.05; // 5vh
+        finalNavbarSpacing = refValues.navbarSpacing + navbarSpacingCompensation;
+      }
+
       const newSpacing = {
-        navbarSpacing: refValues.navbarSpacing, // Fixe - ne change pas avec l'écran
+        navbarSpacing: finalNavbarSpacing, // Fixe pour desktop, avec compensation en mobile
         videoSpacing: refValues.videoSpacing, // Fixe - ne change pas avec l'écran
-        carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile
+        carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile (en px mais calculé en % de screenHeight)
+        carouselSpacingPercent: isMobile ? 0.05 : null, // Pourcentage pour mobile (5% de la hauteur d'écran - réduit de 10% à 5%)
         horizontalMargin: refValues.horizontalMargin, // Fixe - ne change pas avec l'écran
         videoHeight: videoHeight, // Adaptatif pour remplir l'espace disponible
         bottomMargin: bottomMarginFixed, // Fixe - marge en bas constante (18px mobile, 17px desktop = navbarSpacing)
@@ -663,7 +665,7 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(true);
         // Activer le son en mobile après l'interaction utilisateur
         await activateSoundOnMobile();
-        
+
         // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
         if (!isHovering) {
           controlsTimeoutRef.current = setTimeout(() => {
@@ -751,7 +753,9 @@ export default function VideoList({ onFullscreenChange }) {
           {!isFullscreen && (
             <div
               style={{
-                height: `${spacing.navbarSpacing}px`,
+                height: spacing.isMobile
+                  ? `5vh` // En mobile : 5vh de compensation pour maintenir la position de la vidéo/navbar
+                  : `${spacing.navbarSpacing}px`, // Desktop : pixels fixes
                 backgroundColor: 'transparent' // Pour forcer l'application du style
               }}
               data-debug-spacing={spacing.navbarSpacing}
@@ -1055,7 +1059,9 @@ export default function VideoList({ onFullscreenChange }) {
           {/* Espacement Video → Carrousel - variable, s'adapte pour que tout tienne dans 100vh */}
           <div
             style={{
-              height: `${spacing.carouselSpacing}px`, // Espacement dynamique calculé
+              height: spacing.isMobile && spacing.carouselSpacingPercent
+                ? `${spacing.carouselSpacingPercent * 100}vh` // En mobile : utiliser un pourcentage de la hauteur d'écran
+                : `${spacing.carouselSpacing}px`, // Desktop : espacement en pixels
               backgroundColor: 'transparent'
             }}
           />
