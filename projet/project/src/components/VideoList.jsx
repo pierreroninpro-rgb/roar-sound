@@ -97,8 +97,8 @@ export default function VideoList({ onFullscreenChange }) {
         videoHeight = screenHeight * videoHeightPercent;
 
         // Utiliser un pourcentage de la hauteur d'écran pour positionner le carrousel au même niveau
-        // sur tous les téléphones (10% de la hauteur d'écran - descendu de 1% par rapport à 9%)
-        const carouselSpacingPercent = 0.10; // 10% de la hauteur d'écran (9% + 1% pour descendre le carrousel)
+        // sur tous les téléphones (9.5% de la hauteur d'écran - remonté de 0.5% par rapport à 10%)
+        const carouselSpacingPercent = 0.095; // 9.5% de la hauteur d'écran (10% - 0.5% pour remonter le carrousel)
         carouselSpacing = screenHeight * carouselSpacingPercent;
 
         bottomMarginFixed = refValues.bottomMargin; // Fixe pour mobile (18px)
@@ -215,7 +215,7 @@ export default function VideoList({ onFullscreenChange }) {
         navbarSpacing: refValues.navbarSpacing, // Fixe - ne change pas avec l'écran
         videoSpacing: refValues.videoSpacing, // Fixe - ne change pas avec l'écran
         carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile (en px mais calculé en % de screenHeight)
-        carouselSpacingPercent: isMobile ? 0.10 : null, // Pourcentage pour mobile (10% de la hauteur d'écran - 9% + 1% pour descendre)
+        carouselSpacingPercent: isMobile ? 0.095 : null, // Pourcentage pour mobile (9.5% de la hauteur d'écran - 10% - 0.5% pour remonter)
         horizontalMargin: refValues.horizontalMargin, // Fixe - ne change pas avec l'écran
         videoHeight: videoHeight, // En mobile : calculé en vh pour cohérence, en desktop : adaptatif
         videoHeightPercent: isMobile ? 0.28 : null, // Pourcentage pour mobile (28% de la hauteur d'écran)
@@ -1050,7 +1050,7 @@ export default function VideoList({ onFullscreenChange }) {
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.descriptionFontSize}px`,
-                  marginBottom: spacing.isMobile ? 'calc(1px + 1vh)' : 'calc(1px + 1vh)'
+                  marginBottom: spacing.isMobile ? 'calc(1px + 0.5vh)' : 'calc(1px + 0.5vh)'
                 }}
               >
                 {selectedVideo?.description}
