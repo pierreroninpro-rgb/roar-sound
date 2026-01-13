@@ -165,12 +165,24 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const gap = dimensions.gap;
         const cardWidth = dimensions.cardWidth;
 
-        // Pour mobile, ajouter une marge à gauche pour centrer les 3 images visibles
+        // Pour mobile, calculer startX pour centrer l'image du milieu
         let startX = 0;
         if (isMobile) {
-            const mobilePadding = 20; // Même padding que dans le calcul des dimensions
-            const totalWidthFor3Items = (3 * cardWidth) + (2 * gap); // 3 images + 2 gaps
-            startX = mobilePadding; // Commencer après la marge gauche
+            // Utiliser la largeur du conteneur interne (containerRef) qui a width: 100%
+            // Le conteneur parent a un padding de 20px à gauche et à droite
+            const containerWidth = containerRef.current
+                ? containerRef.current.getBoundingClientRect().width
+                : window.innerWidth - 40; // Approximatif si pas encore monté (window.innerWidth - 40px de padding)
+
+            // Calculer la position pour que l'image du milieu (la 2ème des 3 visibles) soit centrée
+            // L'image du milieu est à la position : startX + (cardWidth + gap)
+            // Son centre est à : startX + (cardWidth + gap) + cardWidth/2
+            // On veut que ce centre soit au centre du conteneur : containerWidth / 2
+            // Donc : startX + (cardWidth + gap) + cardWidth/2 = containerWidth / 2
+            // startX = containerWidth / 2 - (cardWidth + gap) - cardWidth/2
+            // startX = containerWidth / 2 - 1.5*cardWidth - gap
+            const centerOfContainer = containerWidth / 2;
+            startX = centerOfContainer - (cardWidth + gap) - (cardWidth / 2);
         }
 
         const initialPositions = videoList.map((v, i) => {
