@@ -53,8 +53,10 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 return;
             }
 
-            const mobile = containerWidth <= 820;
-            const tablet = containerWidth > 820 && containerWidth < 1024;
+            // Mobile : uniquement les vrais téléphones (≤ 500px)
+            const mobile = containerWidth <= 500;
+            // Tablette/petit desktop : entre 500px et 1024px → 5 images
+            const tablet = containerWidth > 500 && containerWidth < 1024;
             const tabletLarge = containerWidth >= 900 && containerWidth < 1024; // Zone avec 7 images
             setIsMobile(mobile);
             setIsTablet(tablet);
@@ -92,61 +94,47 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 });
                 return; // Sortir de la fonction car on a déjà défini les dimensions
             } else {
-                // Desktop : dimensions fixes 105px × 186px pour 9 images visibles
-                if (visibleItems === VISIBLE_ITEMS_DESKTOP) {
-                    // Desktop : dimensions fixes
-                    finalCardWidth = 105; // Largeur fixe de 105px
+                // Desktop et Tablette (5 et 7 images) : dimensions fixes 105px × 186px (même taille pour tous)
+                // Utiliser les mêmes dimensions que le desktop pour toutes les tablettes
+                finalCardWidth = 105; // Largeur fixe de 105px
 
-                    // Calculer le gap pour que 9 images soient visibles
-                    // 9 images × 105px = 945px
-                    // Il faut 8 gaps entre les 9 images
-                    // containerWidth = 9 × 105 + 8 × gap
-                    // gap = (containerWidth - 945) / 8
-                    const totalImagesWidth = 9 * 105; // 945px
-                    const numberOfGaps = 8; // 8 gaps pour 9 images
-                    const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
+                // Calculer le gap pour que le nombre d'images visibles soit respecté
+                // visibleItems images × 105px = totalImagesWidth
+                // Il faut (visibleItems - 1) gaps entre les images
+                // containerWidth = visibleItems × 105 + (visibleItems - 1) × gap
+                // gap = (containerWidth - totalImagesWidth) / (visibleItems - 1)
+                const totalImagesWidth = visibleItems * 105;
+                const numberOfGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
+                const calculatedGap = (containerWidth - totalImagesWidth) / numberOfGaps;
 
-                    // Utiliser le gap calculé, avec une valeur minimale de sécurité
-                    // Si le conteneur est trop petit, utiliser un gap minimum
-                    const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
+                // Utiliser le gap calculé, avec une valeur minimale de sécurité
+                // Si le conteneur est trop petit, utiliser un gap minimum
+                const finalGap = Math.max(calculatedGap, 20); // Gap minimum de 20px
 
-                    // Si le conteneur est vraiment trop petit (moins de 945px), on garde quand même un gap raisonnable
-                    if (calculatedGap < 0) {
-                        console.warn(`Conteneur trop petit (${containerWidth}px) pour 9 images de 105px. Gap ajusté à 20px.`);
-                    }
-
-                    setDimensions({
-                        cardWidth: finalCardWidth,
-                        gap: finalGap,
-                        cardHeight: 186, // Hauteur fixe de 186px
-                        containerHeight: 186 + 8 + 50 // Image + margin-top + titre
-                    });
-                    return; // Sortir de la fonction car on a déjà défini les dimensions
-                } else {
-                    // Tablet : calcul normal
-                    const totalGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
-                    const availableWidthForCards = Math.max(0, containerWidth - (totalGaps * BASE_GAP));
-                    const uniformCardWidth = availableWidthForCards / visibleItems;
-
-                    finalCardWidth = uniformCardWidth;
-
-                    // Limiter les tailles pour éviter les valeurs aberrantes
-                    if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                        finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
-                    }
+                // Si le conteneur est vraiment trop petit, on garde quand même un gap raisonnable
+                if (calculatedGap < 0) {
+                    console.warn(`Conteneur trop petit (${containerWidth}px) pour ${visibleItems} images de 105px. Gap ajusté à 20px.`);
                 }
+
+                // Debug pour vérifier les dimensions
+                console.log('Carrousel dimensions:', {
+                    containerWidth,
+                    visibleItems,
+                    finalCardWidth,
+                    finalGap,
+                    cardHeight: 186,
+                    tabletLarge,
+                    tablet
+                });
+
+                setDimensions({
+                    cardWidth: finalCardWidth,
+                    gap: finalGap,
+                    cardHeight: 186, // Hauteur fixe de 186px (même que desktop)
+                    containerHeight: 186 + 8 + 50 // Image + margin-top + titre
+                });
+                return; // Sortir de la fonction car on a déjà défini les dimensions
             }
-
-            // La hauteur reste proportionnelle à la largeur (sauf pour desktop qui a déjà été défini)
-            const aspectRatio = BASE_CARD_HEIGHT / BASE_CARD_WIDTH;
-            let finalCardHeight = finalCardWidth * aspectRatio;
-
-            setDimensions({
-                cardWidth: finalCardWidth,
-                gap: mobile ? BASE_GAP_MOBILE : BASE_GAP, // Gap réduit pour mobile, normal pour desktop
-                cardHeight: finalCardHeight,
-                containerHeight: finalCardHeight + 8 + 50 // Hauteur par défaut pour desktop/tablet
-            });
         };
 
         calculateDimensions();
@@ -504,7 +492,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         gap: dimensions.gap,
         itemsLength: items.length,
         isMobile,
-        isTablet
+        isTablet,
+        windowWidth: typeof window !== 'undefined' ? window.innerWidth : 0
     });
 
     // Ne pas rendre si pas de vidéos ou dimensions invalides
@@ -603,8 +592,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                     position: 'relative',
                                     left: '50%',
                                     transform: 'translateX(-50%)',
-                                    width: 'auto',
-                                    maxWidth: 'none'
+                                    width: 'max-content',
+                                    maxWidth: 'none',
+                                    whiteSpace: 'nowrap'
                                 }}
                             >
                                 {item.title || item.alt || ""}

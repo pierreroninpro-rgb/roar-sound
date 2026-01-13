@@ -59,6 +59,7 @@ export default function VideoList({ onFullscreenChange }) {
     isMobile: false, // État pour savoir si on est en mobile
     isTablet: false, // État pour savoir si on est en tablette
     isTabletLarge: false, // État pour savoir si on est en tablette large (7 images)
+    isTabletSmall: false, // État pour savoir si on est en tablette (500px - 1024px) avec logique téléphone
     openIconWidth: 20, // Taille responsive de l'icône open
     openIconHeight: 20, // Taille responsive de l'icône open
     titleFontSize: 12, // Taille de police responsive pour le titre
@@ -75,11 +76,13 @@ export default function VideoList({ onFullscreenChange }) {
       const windowWidth = window.innerWidth;
       const containerWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : null;
 
-      const mobileCheck = screenWidth <= 820; // Même breakpoint que le carrousel
+      const mobileCheck = screenWidth <= 500; // Même breakpoint que le carrousel (uniquement vrais téléphones)
       setIsMobile(mobileCheck);
       const isMobile = mobileCheck;
-      const isTablet = screenWidth > 820 && screenWidth < 1024; // Tablette : entre 820px et 1024px
+      const isTablet = screenWidth > 500 && screenWidth < 1024; // Tablette/petit desktop : entre 500px et 1024px
       const isTabletLarge = screenWidth >= 900 && screenWidth < 1024; // Zone tablette large avec 7 images
+      // Toutes les tablettes (500px - 1024px) : logique téléphone (descriptions sous la vidéo)
+      const isTabletSmall = screenWidth > 500 && screenWidth < 1024; // Toutes les tablettes avec logique téléphone
 
       const baseWidth = isMobile ? BASE_WIDTH_MOBILE : BASE_WIDTH_DESKTOP;
       const scaleRatio = screenWidth / baseWidth;
@@ -90,6 +93,7 @@ export default function VideoList({ onFullscreenChange }) {
       let videoHeight;
       let carouselSpacing;
       let bottomMarginFixed;
+      let originalCarouselSpacing; // Pour stocker la valeur originale avant modification
 
       if (isMobile) {
         // Utiliser des unités viewport (vh) pour garantir un rendu cohérent sur tous les téléphones
@@ -154,34 +158,77 @@ export default function VideoList({ onFullscreenChange }) {
         carouselSpacing = adaptiveCarouselSpacing;
         bottomMarginFixed = adaptiveBottomMargin;
 
-        if ((isTablet && !isTabletLarge) || isTabletLarge) {
-          // En tablette normale (5 images) et tablette large (7 images) : réduire la hauteur de la vidéo pour libérer de l'espace
-          // Calculer l'espace disponible en tenant compte du carrousel et des marges
-          const fixedHeight = navbarHeight + refValues.navbarSpacing + carouselSpacing + carouselWithTitle + bottomMarginFixed;
-          const availableHeightForVideo = screenHeight - fixedHeight;
+        // Stocker la valeur originale de carouselSpacing avant modification (pour utilisation après)
+        originalCarouselSpacing = carouselSpacing;
 
-          // Réduire la vidéo à 70% de l'espace disponible pour laisser de la place au carrousel
-          videoHeight = availableHeightForVideo * 0.7;
+        // Calculer l'espace disponible pour la vidéo (pour toutes les tailles d'écran)
+        const fixedHeight = navbarHeight + refValues.navbarSpacing + carouselSpacing + carouselWithTitle + bottomMarginFixed;
+        const availableHeightForVideo = screenHeight - fixedHeight;
 
-          // S'assurer d'avoir au moins une hauteur minimale raisonnable (mais pas plus que l'espace disponible)
-          const minVideoHeightTablet = refValues.videoHeight * 0.4; // Minimum 40% de la hauteur de référence
-          videoHeight = Math.max(videoHeight, minVideoHeightTablet);
-          videoHeight = Math.min(videoHeight, availableHeightForVideo * 0.75); // Maximum 75% de l'espace disponible
-        } else if (!isTablet) {
-          // Calculer l'espace disponible pour la vidéo (desktop uniquement)
-          // Hauteur totale utilisée = navbar + navbarSpacing + carouselSpacing + carousel + bottomMargin
-          const fixedHeight = navbarHeight + refValues.navbarSpacing + carouselSpacing + carouselWithTitle + bottomMarginFixed;
-          const availableHeightForVideo = screenHeight - fixedHeight;
+        // Calculer un pourcentage adaptatif basé sur la largeur de l'écran pour une transition fluide
+        // Plus l'écran est petit, plus la vidéo prend moins d'espace pour laisser de la place aux descriptions
+        let videoHeightPercentage = 1.0; // 100% par défaut (desktop large)
 
-          // La vidéo doit s'adapter à l'espace disponible sans dépasser
-          // Pour que le carrousel reste toujours visible, la vidéo ne doit jamais dépasser l'espace disponible
-          // Utiliser directement l'espace disponible (la vidéo sera plus petite si nécessaire)
-          videoHeight = availableHeightForVideo;
+        if (isTablet || isTabletLarge) {
+          // En tablette : réduire progressivement
+          videoHeightPercentage = 0.7; // 70% pour tablette
+        } else if (!isMobile) {
+          // En desktop : calculer un pourcentage progressif basé sur la largeur de l'écran
+          // Plus l'écran est petit, plus on réduit la vidéo pour laisser de la place aux descriptions
+          const screenWidth = window.innerWidth;
+          // Entre 1024px (tablette) et 1920px (grand desktop), transition fluide de 70% à 100%
+          if (screenWidth < 1920) {
+            // Transition fluide : plus l'écran est petit, plus la vidéo est petite
+            const minPercentage = 0.7; // 70% minimum
+            const maxPercentage = 1.0; // 100% maximum
+            const minWidth = 1024; // Largeur minimale pour commencer la transition
+            const maxWidth = 1920; // Largeur maximale pour finir la transition
+
+            if (screenWidth <= minWidth) {
+              videoHeightPercentage = minPercentage;
+            } else if (screenWidth >= maxWidth) {
+              videoHeightPercentage = maxPercentage;
+            } else {
+              // Interpolation linéaire entre min et max
+              const ratio = (screenWidth - minWidth) / (maxWidth - minWidth);
+              videoHeightPercentage = minPercentage + (maxPercentage - minPercentage) * ratio;
+            }
+          } else {
+            videoHeightPercentage = 1.0; // 100% pour les très grands écrans
+          }
         }
+
+        // Appliquer le pourcentage à l'espace disponible
+        videoHeight = availableHeightForVideo * videoHeightPercentage;
+
+        // S'assurer d'avoir au moins une hauteur minimale raisonnable
+        const minVideoHeight = refValues.videoHeight * 0.4; // Minimum 40% de la hauteur de référence
+        videoHeight = Math.max(videoHeight, minVideoHeight);
+        videoHeight = Math.min(videoHeight, availableHeightForVideo); // Ne jamais dépasser l'espace disponible
       }
 
       // Réduire la hauteur de la vidéo de 15% puis agrandir de 5% puis augmenter de 5% puis augmenter de 2%
+      const videoHeightBeforeMultipliers = videoHeight;
       videoHeight = videoHeight * 0.85 * 1.05 * 1.05 * 1.02;
+
+      // Calculer l'espace perdu et l'ajouter au carouselSpacing pour maintenir la position du carrousel
+      // Ne pas appliquer pour la tablette petite (500px - 762px) qui utilise la logique téléphone
+      if (!isMobile && !isTabletSmall && typeof originalCarouselSpacing !== 'undefined' && originalCarouselSpacing !== null) {
+        // Utiliser la valeur originale de carouselSpacing pour le calcul de référence
+        const navbarHeight = 12 + 60; // margin-top + hauteur navbar approximative
+        const carouselWithTitle = 250; // Hauteur approximative du carrousel avec titres
+        const fixedHeightForReference = navbarHeight + refValues.navbarSpacing + originalCarouselSpacing + carouselWithTitle + bottomMarginFixed;
+        const availableHeightForVideoReference = screenHeight - fixedHeightForReference;
+        const fullVideoHeightWithMultipliers = availableHeightForVideoReference * 0.85 * 1.05 * 1.05 * 1.02;
+
+        // Calculer l'espace perdu (différence entre la hauteur à 100% et la hauteur actuelle)
+        const lostSpace = fullVideoHeightWithMultipliers - videoHeight;
+
+        // Ajouter l'espace perdu au carouselSpacing pour que le carrousel reste à sa position
+        if (lostSpace > 0) {
+          carouselSpacing = originalCarouselSpacing + lostSpace;
+        }
+      }
 
       // Taille de l'icône open responsive (proportionnelle)
       const openIconBaseWidth = 20; // Taille de base sur desktop
@@ -198,16 +245,11 @@ export default function VideoList({ onFullscreenChange }) {
       let subtitleFontSize = 12; // Par défaut mobile
       let descriptionFontSize = 12; // Par défaut mobile
 
-      if (isTabletLarge || (isTablet && !isTabletLarge)) {
-        // Pour tablette (5 et 7 images, 820px-1024px), utiliser scaleRatio pour rendre responsive
-        titleFontSize = baseTitleFontSize * scaleRatio;
-        subtitleFontSize = baseSubtitleFontSize * scaleRatio;
-        descriptionFontSize = baseDescriptionFontSize * scaleRatio;
-      } else if (!isMobile && !isTablet) {
-        // Pour desktop, taille fixe
-        titleFontSize = baseTitleFontSize;
-        subtitleFontSize = baseSubtitleFontSize;
-        descriptionFontSize = baseDescriptionFontSize;
+      if (!isMobile) {
+        // Pour desktop et tablette : taille fixe à 17px
+        titleFontSize = baseTitleFontSize; // 17px
+        subtitleFontSize = baseSubtitleFontSize; // 17px
+        descriptionFontSize = baseDescriptionFontSize; // 17px
       }
 
       // En desktop, forcer la marge inférieure à être égale à la marge supérieure de la navbar pour symétrie
@@ -227,6 +269,7 @@ export default function VideoList({ onFullscreenChange }) {
         isMobile: isMobile, // État mobile pour le rendu
         isTablet: isTablet, // État tablette pour le rendu
         isTabletLarge: isTabletLarge, // État tablette large (7 images) pour le rendu
+        isTabletSmall: isTabletSmall, // Toutes les tablettes (500px - 1024px) avec logique téléphone
         openIconWidth: openIconWidth, // Taille responsive de l'icône open
         openIconHeight: openIconHeight, // Taille responsive de l'icône open
         titleFontSize: titleFontSize, // Taille de police responsive pour le titre
@@ -866,8 +909,8 @@ export default function VideoList({ onFullscreenChange }) {
           <div
             className="source-sans-light flex w-full"
             style={{
-              flexDirection: spacing.isMobile ? 'column' : 'row',
-              gap: spacing.isMobile ? '0' : '1.5rem',
+              flexDirection: (spacing.isMobile || spacing.isTabletSmall) ? 'column' : 'row',
+              gap: (spacing.isMobile || spacing.isTabletSmall) ? '0' : '1.5rem',
               alignItems: spacing.isMobile ? 'stretch' : 'flex-start',
               paddingLeft: (spacing.isMobile || isFullscreen) ? '0' : `${spacing.horizontalMargin}px`,
               paddingRight: (spacing.isMobile || isFullscreen) ? '0' : `${spacing.horizontalMargin}px`,
@@ -950,17 +993,19 @@ export default function VideoList({ onFullscreenChange }) {
                         className={`${showControls || !isPlaying || isHovering ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: '0.1rem 1rem',
+                          paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '1rem',
                           position: 'absolute',
-                          bottom: '0',
-                          left: '0',
-                          right: '0',
+                          bottom: '4px',
+                          left: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
+                          right: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 15,
                           pointerEvents: 'auto',
-                          fontFamily: "'Helvetica', 'Arial', sans-serif"
+                          fontFamily: "'Helvetica', 'Arial', sans-serif",
+                          boxSizing: 'border-box'
                         }}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={handleNavbarMouseEnter}
@@ -1141,11 +1186,11 @@ export default function VideoList({ onFullscreenChange }) {
               className="flex flex-col justify-start font-HelveticaNeue font-light text-grey-dark"
               style={{
                 boxSizing: 'border-box',
-                width: spacing.isMobile ? '100%' : 'auto',
-                flex: spacing.isMobile ? 'none' : '1',
-                minWidth: spacing.isMobile ? 'auto' : '20.83vw',
-                margin: spacing.isMobile ? '18px 18px 0px 18px' : '1.125rem 0px 0px 1.125rem',
-                marginTop: spacing.isMobile ? '1rem' : '1.125rem'
+                width: (spacing.isMobile || spacing.isTabletSmall) ? '100%' : 'auto',
+                flex: (spacing.isMobile || spacing.isTabletSmall) ? 'none' : '1',
+                minWidth: (spacing.isMobile || spacing.isTabletSmall) ? 'auto' : '20.83vw',
+                margin: spacing.isMobile ? '18px 18px 0px 18px' : spacing.isTabletSmall ? `${spacing.horizontalMargin}px ${spacing.horizontalMargin}px 0px ${spacing.horizontalMargin}px` : '1.125rem 0px 0px 1.125rem',
+                marginTop: spacing.isMobile ? '1rem' : spacing.isTabletSmall ? '1rem' : '1.125rem'
               }}
             >
               <h3
