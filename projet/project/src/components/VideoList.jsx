@@ -88,8 +88,13 @@ export default function VideoList({ onFullscreenChange }) {
       let bottomMarginFixed;
 
       if (isMobile) {
-        // Augmenter la hauteur de la vidéo en mobile pour qu'elle soit plus grande
-        videoHeight = 220 * scaleRatio; // Augmenté de 154 à 180
+        // Utiliser des unités viewport (vh) pour garantir un rendu cohérent sur tous les téléphones
+        // La hauteur de la vidéo en vh (environ 28% de la hauteur d'écran pour correspondre à 220px sur un écran de 390px de large)
+        // Sur un iPhone SE (667px de hauteur) : 28vh ≈ 187px
+        // Sur un iPhone 15 Pro Max (932px de hauteur) : 28vh ≈ 261px
+        // Cela garantit une proportion cohérente sur tous les téléphones
+        const videoHeightPercent = 0.28; // 28% de la hauteur d'écran
+        videoHeight = screenHeight * videoHeightPercent;
 
         // Utiliser un pourcentage de la hauteur d'écran pour positionner le carrousel au même niveau
         // sur tous les téléphones (9% de la hauteur d'écran - remonté de 1% par rapport à 10%)
@@ -212,7 +217,8 @@ export default function VideoList({ onFullscreenChange }) {
         carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile (en px mais calculé en % de screenHeight)
         carouselSpacingPercent: isMobile ? 0.09 : null, // Pourcentage pour mobile (9% de la hauteur d'écran - 10% - 1% pour remonter)
         horizontalMargin: refValues.horizontalMargin, // Fixe - ne change pas avec l'écran
-        videoHeight: videoHeight, // Adaptatif pour remplir l'espace disponible
+        videoHeight: videoHeight, // En mobile : calculé en vh pour cohérence, en desktop : adaptatif
+        videoHeightPercent: isMobile ? 0.28 : null, // Pourcentage pour mobile (28% de la hauteur d'écran)
         bottomMargin: bottomMarginFixed, // Fixe - marge en bas constante (18px mobile, 17px desktop = navbarSpacing)
         isMobile: isMobile, // État mobile pour le rendu
         isTablet: isTablet, // État tablette pour le rendu
@@ -238,7 +244,9 @@ export default function VideoList({ onFullscreenChange }) {
         navbarSpacing: `${newSpacing.navbarSpacing.toFixed(2)}px`,
         videoSpacing: `${newSpacing.videoSpacing.toFixed(2)}px`,
         horizontalMargin: `${newSpacing.horizontalMargin.toFixed(2)}px`,
-        videoHeight: `${newSpacing.videoHeight.toFixed(2)}px`
+        videoHeight: isMobile && newSpacing.videoHeightPercent
+          ? `${(newSpacing.videoHeightPercent * 100).toFixed(2)}vh`
+          : `${newSpacing.videoHeight.toFixed(2)}px`
       });
       console.log('===================================');
 
@@ -711,7 +719,9 @@ export default function VideoList({ onFullscreenChange }) {
     navbarSpacing: `${spacing.navbarSpacing.toFixed(2)}px`,
     videoSpacing: `${spacing.videoSpacing.toFixed(2)}px`,
     horizontalMargin: `${spacing.horizontalMargin.toFixed(2)}px`,
-    videoHeight: `${spacing.videoHeight.toFixed(2)}px`
+    videoHeight: spacing.isMobile && spacing.videoHeightPercent
+      ? `${(spacing.videoHeightPercent * 100).toFixed(2)}vh`
+      : `${spacing.videoHeight.toFixed(2)}px`
   });
 
   return (
@@ -782,7 +792,9 @@ export default function VideoList({ onFullscreenChange }) {
                     ref={videoContainerRef}
                     className="overflow-hidden roar-blue relative w-full cursor-pointer"
                     style={{
-                      height: isFullscreen ? '100vh' : `${spacing.videoHeight}px`,
+                      height: isFullscreen ? '100vh' : (spacing.isMobile && spacing.videoHeightPercent
+                        ? `${spacing.videoHeightPercent * 100}vh` // En mobile : utiliser vh pour cohérence
+                        : `${spacing.videoHeight}px`), // Desktop : pixels
                       width: isFullscreen ? '100vw' : '100%',
                       maxWidth: isFullscreen ? '100vw' : (spacing.isMobile ? '100%' : `${(spacing.videoHeight * 16) / 9}px`),
                       boxSizing: 'border-box',
