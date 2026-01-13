@@ -251,15 +251,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 } else {
                     // Desktop ou mobile après swipe : appliquer la vitesse avec décélération
                     if (isMobile && speedRef.current !== 0) {
-                        // En mobile : décélération plus rapide pour un arrêt naturel
-                        speedRef.current *= 0.92; // Réduire de 8% à chaque frame
+                        // En mobile : décélération plus douce et fluide
+                        speedRef.current *= 0.95; // Réduire de 5% à chaque frame (plus fluide que 0.92)
                         targetSpeed.current = speedRef.current;
                     } else {
                         // Desktop : interpolation douce
                         speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
                     }
 
-                    if (Math.abs(speedRef.current) < 0.1) {
+                    // Seuil d'arrêt plus bas pour une décélération plus naturelle
+                    if (Math.abs(speedRef.current) < 0.05) {
                         speedRef.current = 0;
                         targetSpeed.current = 0;
                     }
@@ -365,18 +366,19 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const minX = -cardWidthPlusGap;
         const maxX = totalWidth - dimensions.cardWidth;
 
-        // Mettre à jour les positions dans la ref de manière optimisée
-        const newPositions = itemsPositionsRef.current.map((item) => {
-            let newX = item.x + delta;
+        // Mettre à jour les positions dans la ref de manière optimisée avec une boucle for
+        const newPositions = new Array(itemsPositionsRef.current.length);
+        for (let i = 0; i < itemsPositionsRef.current.length; i++) {
+            let newX = itemsPositionsRef.current[i].x + delta;
             // Gérer le loop de manière optimisée
             if (newX < minX) newX += totalWidth;
             else if (newX > maxX) newX -= totalWidth;
-            return { ...item, x: newX };
-        });
+            newPositions[i] = { ...itemsPositionsRef.current[i], x: newX };
+        }
 
         itemsPositionsRef.current = newPositions;
 
-        // Mettre à jour l'état une seule fois par frame
+        // Mettre à jour l'état de manière optimisée
         setItems(newPositions);
     };
 
@@ -384,30 +386,24 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
         if (isMobile && isDragging.current) {
-            // Annuler l'animation frame précédente si elle existe
-            if (dragAnimationFrame.current) {
-                cancelAnimationFrame(dragAnimationFrame.current);
-            }
-
             const currentX = e.touches[0].clientX;
-            const currentTime = Date.now();
+            const currentTime = performance.now(); // Utiliser performance.now() pour plus de précision
             const delta = currentX - lastTouchX.current;
 
-            // Calculer la vitesse pour l'animation fluide (simplifié)
+            // Calculer la vitesse pour l'animation fluide
             if (lastMoveTime.current && currentTime - lastMoveTime.current > 0) {
                 const timeDelta = currentTime - lastMoveTime.current;
                 const velocity = delta / timeDelta;
                 velocities.current.push(velocity);
-                // Garder seulement les 3 dernières vitesses pour moins de calculs
-                if (velocities.current.length > 3) {
+                // Garder seulement les 5 dernières vitesses pour un calcul plus précis
+                if (velocities.current.length > 5) {
                     velocities.current.shift();
                 }
             }
 
-            // Utiliser requestAnimationFrame pour une mise à jour fluide
-            dragAnimationFrame.current = requestAnimationFrame(() => {
-                updateItemsPositions(delta);
-            });
+            // Mettre à jour directement sans requestAnimationFrame pour une réactivité immédiate
+            // Cela évite les conflits avec la boucle principale
+            updateItemsPositions(delta);
 
             lastTouchX.current = currentX;
             lastMoveTime.current = currentTime;
@@ -431,12 +427,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
             // Calculer la vitesse moyenne pour l'animation fluide après le swipe
             if (velocities.current.length > 0) {
-                const avgVelocity = velocities.current.reduce((a, b) => a + b, 0) / velocities.current.length;
+                // Utiliser une moyenne pondérée pour donner plus de poids aux vitesses récentes
+                const recentVelocities = velocities.current.slice(-3); // 3 dernières vitesses
+                const avgVelocity = recentVelocities.reduce((a, b) => a + b, 0) / recentVelocities.length;
+
                 // Convertir en pixels par frame (environ 60fps = 16.67ms par frame)
-                const velocityPerFrame = avgVelocity * 16.67;
+                // Multiplier par un facteur pour une décélération plus naturelle
+                const velocityPerFrame = avgVelocity * 16.67 * 0.8; // Facteur de 0.8 pour moins d'inertie
 
                 // Appliquer une vitesse initiale basée sur le geste pour décélération fluide
-                if (Math.abs(velocityPerFrame) > 0.3) {
+                if (Math.abs(velocityPerFrame) > 0.2) {
                     // Négatif car dans la boucle on fait item.x - speedRef.current
                     targetSpeed.current = -velocityPerFrame;
                     speedRef.current = -velocityPerFrame;
@@ -547,7 +547,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     height: `${dimensions.containerHeight || (dimensions.cardHeight + 8 + 50)}px`, // Image + margin-top + titre (adaptatif en mobile)
                     minHeight: isMobile ? `${dimensions.cardHeight + 11 + 40}px` : '200px', // En mobile : image + margin-top (11px) + titre (40px)
                     width: '100%',
-                    overflow: (isMobile && !isLandscape) ? 'hidden' : 'visible'
+                    overflow: (isMobile && !isLandscape) ? 'hidden' : 'visible',
+                    transform: 'translateZ(0)', // Force l'accélération matérielle pour la fluidité
+                    WebkitTransform: 'translateZ(0)'
                 }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -566,12 +568,15 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                             key={item.id + "-" + i}
                             className="absolute"
                             style={{
-                                left: `${itemX}px`,
+                                left: 0,
+                                transform: `translateX(${itemX}px)`,
                                 width: `${itemWidth}px`,
                                 bottom: "0px",
                                 zIndex: 50,
-                                willChange: "transform, opacity",
-                                overflow: 'visible'
+                                willChange: "transform",
+                                overflow: 'visible',
+                                backfaceVisibility: 'hidden', // Optimisation pour la fluidité
+                                WebkitBackfaceVisibility: 'hidden'
                             }}
                         >
                             <img

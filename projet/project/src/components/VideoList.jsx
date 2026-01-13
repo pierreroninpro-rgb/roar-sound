@@ -206,17 +206,8 @@ export default function VideoList({ onFullscreenChange }) {
         bottomMarginFixed = refValues.navbarSpacing;
       }
 
-      // Calculer navbarSpacing avec compensation en mobile
-      let finalNavbarSpacing = refValues.navbarSpacing;
-      if (isMobile) {
-        // Ajouter 5vh de compensation pour maintenir la position de la vidéo/navbar
-        // pendant que le carrousel remonte de 5%
-        const navbarSpacingCompensation = screenHeight * 0.05; // 5vh
-        finalNavbarSpacing = refValues.navbarSpacing + navbarSpacingCompensation;
-      }
-
       const newSpacing = {
-        navbarSpacing: finalNavbarSpacing, // Fixe pour desktop, avec compensation en mobile
+        navbarSpacing: refValues.navbarSpacing, // Fixe - ne change pas avec l'écran
         videoSpacing: refValues.videoSpacing, // Fixe - ne change pas avec l'écran
         carouselSpacing: carouselSpacing, // Fixe pour desktop, variable pour mobile (en px mais calculé en % de screenHeight)
         carouselSpacingPercent: isMobile ? 0.05 : null, // Pourcentage pour mobile (5% de la hauteur d'écran - réduit de 10% à 5%)
@@ -753,9 +744,7 @@ export default function VideoList({ onFullscreenChange }) {
           {!isFullscreen && (
             <div
               style={{
-                height: spacing.isMobile
-                  ? `5vh` // En mobile : 5vh de compensation pour maintenir la position de la vidéo/navbar
-                  : `${spacing.navbarSpacing}px`, // Desktop : pixels fixes
+                height: `${spacing.navbarSpacing}px`,
                 backgroundColor: 'transparent' // Pour forcer l'application du style
               }}
               data-debug-spacing={spacing.navbarSpacing}
@@ -1034,11 +1023,11 @@ export default function VideoList({ onFullscreenChange }) {
                 {selectedVideo?.title}
               </h3>
               <p
-                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? 'mb-[26px]' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} font-style: italic`}
+                className={`text-[12px] font-HelveticaNeue ${spacing.isMobile ? 'mb-[24px]' : 'lg:text-[17px] lg:mb-[4.55rem] lg:mt-[0.75rem]'} font-style: italic`}
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.subtitleFontSize}px`,
-                  marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 15px)`,
+                  marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 13px)`,
                   marginTop: spacing.isMobile ? undefined : `${0.75 * spacing.subtitleFontSize / 20}rem`
                 }}
               >
