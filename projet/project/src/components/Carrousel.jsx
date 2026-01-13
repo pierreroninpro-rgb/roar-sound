@@ -251,16 +251,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 } else {
                     // Desktop ou mobile après swipe : appliquer la vitesse avec décélération
                     if (isMobile && speedRef.current !== 0) {
-                        // En mobile : décélération plus douce et fluide
-                        speedRef.current *= 0.95; // Réduire de 5% à chaque frame (plus fluide que 0.92)
+                        // En mobile : décélération plus rapide pour un mouvement plus contrôlé
+                        speedRef.current *= 0.92; // Réduire de 8% à chaque frame (décélération plus rapide)
                         targetSpeed.current = speedRef.current;
                     } else {
                         // Desktop : interpolation douce
                         speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
                     }
 
-                    // Seuil d'arrêt plus bas pour une décélération plus naturelle
-                    if (Math.abs(speedRef.current) < 0.05) {
+                    // Seuil d'arrêt pour une décélération naturelle
+                    if (Math.abs(speedRef.current) < 0.1) {
                         speedRef.current = 0;
                         targetSpeed.current = 0;
                     }
@@ -432,11 +432,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 const avgVelocity = recentVelocities.reduce((a, b) => a + b, 0) / recentVelocities.length;
 
                 // Convertir en pixels par frame (environ 60fps = 16.67ms par frame)
-                // Multiplier par un facteur pour une décélération plus naturelle
-                const velocityPerFrame = avgVelocity * 16.67 * 0.8; // Facteur de 0.8 pour moins d'inertie
+                // Réduire le facteur pour une vitesse plus contrôlée et fluide
+                const velocityPerFrame = avgVelocity * 16.67 * 0.5; // Facteur réduit à 0.5 pour moins de vitesse
 
                 // Appliquer une vitesse initiale basée sur le geste pour décélération fluide
-                if (Math.abs(velocityPerFrame) > 0.2) {
+                // Seuil réduit pour éviter les mouvements trop petits
+                if (Math.abs(velocityPerFrame) > 0.3) {
                     // Négatif car dans la boucle on fait item.x - speedRef.current
                     targetSpeed.current = -velocityPerFrame;
                     speedRef.current = -velocityPerFrame;
