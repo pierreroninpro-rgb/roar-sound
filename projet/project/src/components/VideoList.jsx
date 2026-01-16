@@ -923,11 +923,16 @@ export default function VideoList({ onFullscreenChange }) {
                       width: isFullscreen ? '100vw' : '100%',
                       maxWidth: isFullscreen ? '100vw' : (spacing.isMobile ? '100%' : `${(spacing.videoHeight * 16) / 9}px`),
                       boxSizing: 'border-box',
-                      position: 'relative',
+                      position: isFullscreen ? 'fixed' : 'relative',
+                      top: isFullscreen ? '0' : undefined,
+                      left: isFullscreen ? '0' : undefined,
+                      right: isFullscreen ? '0' : undefined,
+                      bottom: isFullscreen ? '0' : undefined,
                       backgroundColor: isFullscreen ? '#000' : 'transparent',
                       display: isFullscreen ? 'flex' : 'block',
                       alignItems: isFullscreen ? 'center' : 'flex-start',
-                      justifyContent: isFullscreen ? 'center' : 'flex-start'
+                      justifyContent: isFullscreen ? 'center' : 'flex-start',
+                      zIndex: isFullscreen ? 2147483646 : undefined
                     }}
                     onClick={handleVideoClick}
                     onMouseEnter={handleVideoMouseEnter}
@@ -952,7 +957,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <iframe
                       ref={videoRef}
                       key={selectedVideo.id}
-                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0`}
+                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1`}
                       className={isFullscreen ? "pointer-events-none" : "absolute top-0 left-0 w-full h-full pointer-events-none"}
                       style={{
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
@@ -960,10 +965,15 @@ export default function VideoList({ onFullscreenChange }) {
                         height: isFullscreen ? '100vh' : '100%',
                         objectFit: isFullscreen ? 'cover' : 'cover',
                         maxWidth: isFullscreen ? '100vw' : 'none',
-                        maxHeight: isFullscreen ? '100vh' : 'none'
+                        maxHeight: isFullscreen ? '100vh' : 'none',
+                        position: isFullscreen ? 'fixed' : 'absolute',
+                        top: isFullscreen ? '0' : '0',
+                        left: isFullscreen ? '0' : '0',
+                        right: isFullscreen ? '0' : undefined,
+                        bottom: isFullscreen ? '0' : undefined
                       }}
                       frameBorder="0"
-                      allow="autoplay; picture-in-picture"
+                      allow="autoplay; picture-in-picture; fullscreen"
                       title={selectedVideo.title}
                     />
 
