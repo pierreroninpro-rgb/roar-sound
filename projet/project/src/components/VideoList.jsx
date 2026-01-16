@@ -59,7 +59,7 @@ export default function VideoList({ onFullscreenChange }) {
     isMobile: false, // État pour savoir si on est en mobile
     isTablet: false, // État pour savoir si on est en tablette
     isTabletLarge: false, // État pour savoir si on est en tablette large (7 images)
-    isTabletSmall: false, // État pour savoir si on est en tablette (500px - 1024px) avec logique téléphone
+    isTabletSmall: false, // État pour savoir si on est en tablette (500px - 1100px) avec logique téléphone
     openIconWidth: 20, // Taille responsive de l'icône open
     openIconHeight: 20, // Taille responsive de l'icône open
     titleFontSize: 12, // Taille de police responsive pour le titre
@@ -80,9 +80,9 @@ export default function VideoList({ onFullscreenChange }) {
       setIsMobile(mobileCheck);
       const isMobile = mobileCheck;
       const isTablet = screenWidth > 500 && screenWidth < 1024; // Tablette/petit desktop : entre 500px et 1024px
-      const isTabletLarge = screenWidth >= 900 && screenWidth < 1024; // Zone tablette large avec 7 images
-      // Toutes les tablettes (500px - 1024px) : logique téléphone (descriptions sous la vidéo)
-      const isTabletSmall = screenWidth > 500 && screenWidth < 1024; // Toutes les tablettes avec logique téléphone
+      const isTabletLarge = screenWidth >= 900 && screenWidth < 1100; // Zone tablette large avec 7 images (étendu jusqu'à 1100px)
+      // Toutes les tablettes (500px - 1100px) : logique téléphone (descriptions sous la vidéo)
+      const isTabletSmall = screenWidth > 500 && screenWidth < 1100; // Toutes les tablettes avec logique téléphone (étendu jusqu'à 1100px)
 
       const baseWidth = isMobile ? BASE_WIDTH_MOBILE : BASE_WIDTH_DESKTOP;
       const scaleRatio = screenWidth / baseWidth;
@@ -167,35 +167,14 @@ export default function VideoList({ onFullscreenChange }) {
 
         // Calculer un pourcentage adaptatif basé sur la largeur de l'écran pour une transition fluide
         // Plus l'écran est petit, plus la vidéo prend moins d'espace pour laisser de la place aux descriptions
-        let videoHeightPercentage = 1.0; // 100% par défaut (desktop large)
+        let videoHeightPercentage = 1.0; // 100% par défaut (desktop)
 
         if (isTablet || isTabletLarge) {
           // En tablette : réduire progressivement
           videoHeightPercentage = 0.7; // 70% pour tablette
         } else if (!isMobile) {
-          // En desktop : calculer un pourcentage progressif basé sur la largeur de l'écran
-          // Plus l'écran est petit, plus on réduit la vidéo pour laisser de la place aux descriptions
-          const screenWidth = window.innerWidth;
-          // Entre 1024px (tablette) et 1920px (grand desktop), transition fluide de 70% à 100%
-          if (screenWidth < 1920) {
-            // Transition fluide : plus l'écran est petit, plus la vidéo est petite
-            const minPercentage = 0.7; // 70% minimum
-            const maxPercentage = 1.0; // 100% maximum
-            const minWidth = 1024; // Largeur minimale pour commencer la transition
-            const maxWidth = 1920; // Largeur maximale pour finir la transition
-
-            if (screenWidth <= minWidth) {
-              videoHeightPercentage = minPercentage;
-            } else if (screenWidth >= maxWidth) {
-              videoHeightPercentage = maxPercentage;
-            } else {
-              // Interpolation linéaire entre min et max
-              const ratio = (screenWidth - minWidth) / (maxWidth - minWidth);
-              videoHeightPercentage = minPercentage + (maxPercentage - minPercentage) * ratio;
-            }
-          } else {
-            videoHeightPercentage = 1.0; // 100% pour les très grands écrans
-          }
+          // En desktop (≥1024px) : utiliser 100% de l'espace disponible (taille d'origine)
+          videoHeightPercentage = 1.0; // 100% pour desktop
         }
 
         // Appliquer le pourcentage à l'espace disponible
@@ -269,7 +248,7 @@ export default function VideoList({ onFullscreenChange }) {
         isMobile: isMobile, // État mobile pour le rendu
         isTablet: isTablet, // État tablette pour le rendu
         isTabletLarge: isTabletLarge, // État tablette large (7 images) pour le rendu
-        isTabletSmall: isTabletSmall, // Toutes les tablettes (500px - 1024px) avec logique téléphone
+        isTabletSmall: isTabletSmall, // Toutes les tablettes (500px - 1100px) avec logique téléphone
         openIconWidth: openIconWidth, // Taille responsive de l'icône open
         openIconHeight: openIconHeight, // Taille responsive de l'icône open
         titleFontSize: titleFontSize, // Taille de police responsive pour le titre
