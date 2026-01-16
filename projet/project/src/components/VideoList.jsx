@@ -861,11 +861,12 @@ export default function VideoList({ onFullscreenChange }) {
         paddingRight: isFullscreen ? '0' : undefined,
         paddingTop: isFullscreen ? '0' : undefined,
         margin: isFullscreen ? '0' : undefined,
-        height: '100vh', // Hauteur totale de la fenêtre
+        height: isFullscreen ? '100vh' : '100vh', // Hauteur totale de la fenêtre
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        position: 'relative'
+        position: 'relative',
+        backgroundColor: isFullscreen ? '#000' : 'transparent'
       }}
     >
       {error ? (
@@ -923,7 +924,7 @@ export default function VideoList({ onFullscreenChange }) {
                       maxWidth: isFullscreen ? '100vw' : (spacing.isMobile ? '100%' : `${(spacing.videoHeight * 16) / 9}px`),
                       boxSizing: 'border-box',
                       position: 'relative',
-                      backgroundColor: isFullscreen ? 'transparent' : 'transparent',
+                      backgroundColor: isFullscreen ? '#000' : 'transparent',
                       display: isFullscreen ? 'flex' : 'block',
                       alignItems: isFullscreen ? 'center' : 'flex-start',
                       justifyContent: isFullscreen ? 'center' : 'flex-start'
