@@ -923,7 +923,7 @@ export default function VideoList({ onFullscreenChange }) {
                       maxWidth: isFullscreen ? '100vw' : (spacing.isMobile ? '100%' : `${(spacing.videoHeight * 16) / 9}px`),
                       boxSizing: 'border-box',
                       position: 'relative',
-                      backgroundColor: isFullscreen ? '#000' : 'transparent',
+                      backgroundColor: isFullscreen ? 'transparent' : 'transparent',
                       display: isFullscreen ? 'flex' : 'block',
                       alignItems: isFullscreen ? 'center' : 'flex-start',
                       justifyContent: isFullscreen ? 'center' : 'flex-start'
@@ -955,9 +955,9 @@ export default function VideoList({ onFullscreenChange }) {
                       className={isFullscreen ? "pointer-events-none" : "absolute top-0 left-0 w-full h-full pointer-events-none"}
                       style={{
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
-                        width: isFullscreen ? fullscreenVideoDimensions.width : '100%',
-                        height: isFullscreen ? fullscreenVideoDimensions.height : '100%',
-                        objectFit: isFullscreen ? 'contain' : 'cover',
+                        width: isFullscreen ? '100vw' : '100%',
+                        height: isFullscreen ? '100vh' : '100%',
+                        objectFit: isFullscreen ? 'cover' : 'cover',
                         maxWidth: isFullscreen ? '100vw' : 'none',
                         maxHeight: isFullscreen ? '100vh' : 'none'
                       }}
