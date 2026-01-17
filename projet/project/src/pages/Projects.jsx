@@ -19,6 +19,50 @@ const Projects = () => {
         return () => clearTimeout(timer);
     }, []);
 
+    // Bloquer l'orientation en portrait sur mobile (sauf en plein écran vidéo)
+    useEffect(() => {
+        if (!isMobile || isFullscreen) return; // Ne pas bloquer si on est en plein écran vidéo
+
+        // Vérifier si l'API Screen Orientation est disponible
+        if (screen.orientation && screen.orientation.lock) {
+            // Essayer de verrouiller en portrait
+            // Note: Nécessite une interaction utilisateur (peut ne pas fonctionner immédiatement)
+            const lockOrientation = async () => {
+                try {
+                    await screen.orientation.lock('portrait');
+                } catch (err) {
+                    // L'API peut nécessiter une interaction utilisateur ou ne pas être supportée
+                    console.log("Orientation lock not available or requires user gesture:", err);
+                }
+            };
+
+            // Essayer de verrouiller après un court délai (peut ne pas fonctionner sans interaction)
+            lockOrientation();
+
+            // Écouter les changements d'orientation et essayer de re-verrouiller
+            const handleOrientationChange = () => {
+                if (isLandscape && !isFullscreen) {
+                    lockOrientation();
+                }
+            };
+
+            window.addEventListener('orientationchange', handleOrientationChange);
+            screen.orientation?.addEventListener('change', handleOrientationChange);
+
+            return () => {
+                window.removeEventListener('orientationchange', handleOrientationChange);
+                screen.orientation?.removeEventListener('change', handleOrientationChange);
+                
+                // Déverrouiller l'orientation à la destruction du composant (sauf si on est en plein écran)
+                if (!isFullscreen && screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock().catch(() => {
+                        // Ignorer les erreurs lors du déverrouillage
+                    });
+                }
+            };
+        }
+    }, [isMobile, isLandscape, isFullscreen]);
+
     return (
         <>
             {isLoading && <Preloader onComplete={() => setIsLoading(false)} duration={500} />}
