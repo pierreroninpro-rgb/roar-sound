@@ -870,7 +870,7 @@ export default function VideoList({ onFullscreenChange }) {
       className="w-full max-w-full"
       style={{
         boxSizing: 'border-box',
-        overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto', // Pas de scroll en mobile portrait uniquement
+        overflow: (isMobile && !isFullscreen) ? 'hidden' : (isMobile && isFullscreen) ? 'auto' : 'auto', // Cacher le scroll en mobile sauf en plein écran vidéo
         overflowX: 'hidden',
         paddingBottom: isFullscreen ? '0' : `${spacing.bottomMargin}px`, // Marge en bas fixe (18px mobile, 28px desktop)
         paddingLeft: isFullscreen ? '0' : undefined,

@@ -30,7 +30,7 @@ const Home = () => {
 
     return (
         <div className="relative w-screen h-[100dvh] scrollbar-hide" style={{
-            overflow: (isMobile && !isLandscape) ? 'hidden' : 'auto',
+            overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
             overflowX: 'hidden'
         }}>
             {/* Navbar avec marge top responsive */}
