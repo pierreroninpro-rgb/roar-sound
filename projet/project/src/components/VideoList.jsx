@@ -462,15 +462,18 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // Entrer en plein écran sur notre conteneur (pas via Vimeo)
-        if (container.requestFullscreen) {
-          await container.requestFullscreen({ navigationUI: 'hide' });
-        } else if (container.webkitRequestFullscreen) {
-          await container.webkitRequestFullscreen();
-        } else if (container.mozRequestFullScreen) {
-          await container.mozRequestFullScreen();
-        } else if (container.msRequestFullscreen) {
-          await container.msRequestFullscreen();
+        // Entrer en plein écran sur l'élément root (document.documentElement) pour cacher onglets et barre d'adresse
+        // Utiliser document.documentElement au lieu du conteneur pour un vrai plein écran navigateur
+        const elementToFullscreen = document.documentElement;
+
+        if (elementToFullscreen.requestFullscreen) {
+          await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
+        } else if (elementToFullscreen.webkitRequestFullscreen) {
+          await elementToFullscreen.webkitRequestFullscreen();
+        } else if (elementToFullscreen.mozRequestFullScreen) {
+          await elementToFullscreen.mozRequestFullScreen();
+        } else if (elementToFullscreen.msRequestFullscreen) {
+          await elementToFullscreen.msRequestFullscreen();
         }
 
         setIsFullscreen(true);
@@ -530,13 +533,13 @@ export default function VideoList({ onFullscreenChange }) {
         document.msFullscreenElement;
       const isCurrentlyFullscreen = !!fullscreenElement;
 
-      // Vérifier que c'est bien notre conteneur vidéo qui est en plein écran
-      const isOurContainer = fullscreenElement === videoContainerRef.current;
+      // Vérifier que c'est bien le document entier qui est en plein écran (ou notre conteneur pour compatibilité)
+      const isOurFullscreen = fullscreenElement === document.documentElement || fullscreenElement === videoContainerRef.current;
 
-      setIsFullscreen(isCurrentlyFullscreen && isOurContainer);
-      if (onFullscreenChange) onFullscreenChange(isCurrentlyFullscreen && isOurContainer);
+      setIsFullscreen(isCurrentlyFullscreen && isOurFullscreen);
+      if (onFullscreenChange) onFullscreenChange(isCurrentlyFullscreen && isOurFullscreen);
       // Forcer l'affichage des contrôles quand on entre/sort du plein écran
-      if (isCurrentlyFullscreen && isOurContainer) {
+      if (isCurrentlyFullscreen && isOurFullscreen) {
         setShowControls(true);
         setIsHovering(true);
         // Calculer les dimensions pour letterboxing
