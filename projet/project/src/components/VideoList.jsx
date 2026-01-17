@@ -1061,7 +1061,7 @@ export default function VideoList({ onFullscreenChange }) {
                     {/* Navbar en bas - Mode normal */}
                     {!isFullscreen && (
                       <div
-                        className={`${showControls || !isPlaying || isHovering ? 'opacity-100' : 'opacity-0'}`}
+                        className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: '0.1rem 1rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
@@ -1081,6 +1081,11 @@ export default function VideoList({ onFullscreenChange }) {
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
+                        onTouchStart={(e) => {
+                          // Sur mobile, afficher toujours la navbar au touch
+                          setShowControls(true);
+                          setIsHovering(true);
+                        }}
                       >
                         {/* Icône PAUSE/PLAY */}
                         <div
@@ -1510,6 +1515,29 @@ export default function VideoList({ onFullscreenChange }) {
                 }}
               />
             </div>
+
+            {/* Bouton Fullscreen - Toujours visible même en plein écran */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFullscreen();
+              }}
+              className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+              style={{
+                pointerEvents: 'auto',
+                padding: '0.25rem'
+              }}
+            >
+              <img
+                src="/images/open.png"
+                alt="Quitter plein écran"
+                style={{
+                  display: 'block',
+                  width: '20px',
+                  height: '20px'
+                }}
+              />
+            </button>
 
           </div>
         </>,
