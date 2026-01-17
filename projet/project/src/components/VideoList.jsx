@@ -39,6 +39,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isMuted, setIsMuted] = useState(false); // État pour le son
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
+  const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -963,7 +964,21 @@ export default function VideoList({ onFullscreenChange }) {
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
                         width: isFullscreen ? '100vw' : '100%',
                         height: isFullscreen ? '100vh' : '100%',
-                        objectFit: isFullscreen ? 'cover' : 'cover',
+                        objectFit: (() => {
+                          // En plein écran : déterminer objectFit selon l'orientation de l'écran et de la vidéo
+                          if (isFullscreen) {
+                            // Par défaut, supposons que les vidéos sont en paysage (16:9)
+                            // Si on détecte plus tard qu'une vidéo est en portrait, videoAspectRatio sera < 1
+                            const videoIsLandscape = videoAspectRatio >= 1; // >= 1 = paysage, < 1 = portrait
+                            const screenIsLandscape = isLandscape;
+
+                            // Si les orientations correspondent → cover (pas de bandes)
+                            // Si les orientations diffèrent → contain (bandes noires)
+                            return (videoIsLandscape === screenIsLandscape) ? 'cover' : 'contain';
+                          }
+                          // Hors plein écran : toujours cover
+                          return 'cover';
+                        })(),
                         maxWidth: isFullscreen ? '100vw' : 'none',
                         maxHeight: isFullscreen ? '100vh' : 'none',
                         position: isFullscreen ? 'fixed' : 'absolute',
