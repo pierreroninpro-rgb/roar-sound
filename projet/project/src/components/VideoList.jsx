@@ -979,21 +979,7 @@ export default function VideoList({ onFullscreenChange }) {
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
                         width: isFullscreen ? '100vw' : '100%',
                         height: isFullscreen ? '100vh' : '100%',
-                        objectFit: (() => {
-                          // En plein écran : déterminer objectFit selon l'orientation de l'écran et de la vidéo
-                          if (isFullscreen) {
-                            // Par défaut, supposons que les vidéos sont en paysage (16:9)
-                            // Si on détecte plus tard qu'une vidéo est en portrait, videoAspectRatio sera < 1
-                            const videoIsLandscape = videoAspectRatio >= 1; // >= 1 = paysage, < 1 = portrait
-                            const screenIsLandscape = isLandscape;
-
-                            // Si les orientations correspondent → cover (pas de bandes)
-                            // Si les orientations diffèrent → contain (bandes noires)
-                            return (videoIsLandscape === screenIsLandscape) ? 'cover' : 'contain';
-                          }
-                          // Hors plein écran : toujours cover
-                          return 'cover';
-                        })(),
+                        objectFit: 'cover', // Toujours cover pour plein écran sans bandes noires
                         maxWidth: isFullscreen ? '100vw' : 'none',
                         maxHeight: isFullscreen ? '100vh' : 'none',
                         position: isFullscreen ? 'fixed' : 'absolute',
