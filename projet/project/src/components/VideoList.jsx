@@ -439,7 +439,7 @@ export default function VideoList({ onFullscreenChange }) {
 
     try {
       if (isFullscreen) {
-        // Sortir du plein écran
+        // Sortir du plein écran et déverrouiller l'orientation
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
@@ -449,12 +449,22 @@ export default function VideoList({ onFullscreenChange }) {
         } else if (document.msExitFullscreen) {
           await document.msExitFullscreen();
         }
+
+        // Déverrouiller l'orientation si elle était verrouillée
+        try {
+          if (screen.orientation && screen.orientation.unlock) {
+            await screen.orientation.unlock();
+          }
+        } catch (orientationErr) {
+          console.log("Orientation unlock not supported or already unlocked");
+        }
+
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
         // Entrer en plein écran sur notre conteneur (pas via Vimeo)
         if (container.requestFullscreen) {
-          await container.requestFullscreen();
+          await container.requestFullscreen({ navigationUI: 'hide' });
         } else if (container.webkitRequestFullscreen) {
           await container.webkitRequestFullscreen();
         } else if (container.mozRequestFullScreen) {
@@ -462,8 +472,28 @@ export default function VideoList({ onFullscreenChange }) {
         } else if (container.msRequestFullscreen) {
           await container.msRequestFullscreen();
         }
+
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
+
+        // En plein écran, permettre le verrouillage de l'orientation en paysage si possible
+        // Cela permet de regarder les vidéos en mode paysage même sur mobile
+        try {
+          // Attendre un peu pour que le plein écran soit complètement activé
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Essayer de verrouiller en paysage pour une meilleure expérience vidéo
+          // Note: Cela nécessite que l'utilisateur soit déjà en mode paysage ou que le navigateur le permette
+          if (screen.orientation && screen.orientation.lock) {
+            // Ne pas forcer l'orientation, mais permettre le paysage si l'utilisateur le souhaite
+            // screen.orientation.lock('landscape').catch(() => {
+            //   console.log("Orientation lock not allowed - user needs to rotate manually");
+            // });
+          }
+        } catch (orientationErr) {
+          console.log("Screen Orientation API not available:", orientationErr);
+        }
+
         // Calculer les dimensions pour letterboxing
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
