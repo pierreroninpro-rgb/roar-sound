@@ -388,6 +388,21 @@ export default function VideoList({ onFullscreenChange }) {
           } catch (err) {
             console.error("Error getting volume:", err);
           }
+
+          // Détecter l'orientation de la vidéo via l'API Vimeo
+          try {
+            const videoWidth = await playerRef.current.getVideoWidth();
+            const videoHeight = await playerRef.current.getVideoHeight();
+            if (videoWidth && videoHeight) {
+              const aspectRatio = videoWidth / videoHeight;
+              setVideoAspectRatio(aspectRatio);
+              console.log(`Video aspect ratio detected: ${aspectRatio.toFixed(2)} (${videoWidth}x${videoHeight})`);
+            }
+          } catch (err) {
+            console.error("Error getting video dimensions:", err);
+            // Par défaut, supposer format paysage (16:9)
+            setVideoAspectRatio(16 / 9);
+          }
         }
       }, 100);
     }
