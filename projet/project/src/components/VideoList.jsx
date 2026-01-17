@@ -1214,31 +1214,29 @@ export default function VideoList({ onFullscreenChange }) {
                           />
                         </div>
 
-                        {/* Bouton Fullscreen */}
-                        {!isFullscreen && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFullscreen();
-                            }}
-                            className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                        {/* Bouton Fullscreen - Toujours visible, même en plein écran */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFullscreen();
+                          }}
+                          className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                          style={{
+                            pointerEvents: 'auto',
+                            padding: '0.25rem'
+                          }}
+                        >
+                          <img
+                            src="/images/open.png"
+                            alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
                             style={{
-                              pointerEvents: 'auto',
-                              padding: '0.25rem'
+                              display: 'block',
+                              width: `${spacing.openIconWidth}px`,
+                              height: `${spacing.openIconHeight}px`,
+                              marginBottom: spacing.isMobile ? '3px' : '0'
                             }}
-                          >
-                            <img
-                              src="/images/open.png"
-                              alt="Plein écran"
-                              style={{
-                                display: 'block',
-                                width: `${spacing.openIconWidth}px`,
-                                height: `${spacing.openIconHeight}px`,
-                                marginBottom: spacing.isMobile ? '3px' : '0'
-                              }}
-                            />
-                          </button>
-                        )}
+                          />
+                        </button>
                       </div>
                     )}
                   </div>
