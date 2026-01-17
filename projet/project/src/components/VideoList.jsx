@@ -462,18 +462,50 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // Entrer en plein écran sur l'élément root (document.documentElement) pour cacher onglets et barre d'adresse
-        // Utiliser document.documentElement au lieu du conteneur pour un vrai plein écran navigateur
-        const elementToFullscreen = document.documentElement;
+        // Sur mobile, utiliser le conteneur vidéo directement (iOS Safari ne supporte pas bien document.documentElement)
+        // Sur desktop, utiliser document.documentElement pour un vrai plein écran navigateur
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+          (window.innerWidth <= 768);
 
-        if (elementToFullscreen.requestFullscreen) {
-          await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
-        } else if (elementToFullscreen.webkitRequestFullscreen) {
-          await elementToFullscreen.webkitRequestFullscreen();
-        } else if (elementToFullscreen.mozRequestFullScreen) {
-          await elementToFullscreen.mozRequestFullScreen();
-        } else if (elementToFullscreen.msRequestFullscreen) {
-          await elementToFullscreen.msRequestFullscreen();
+        const elementToFullscreen = isMobileDevice ? container : document.documentElement;
+
+        // Essayer d'abord avec navigationUI (peut ne pas fonctionner sur tous les navigateurs)
+        try {
+          if (elementToFullscreen.requestFullscreen) {
+            // Sur desktop, essayer avec navigationUI: 'hide' pour cacher l'UI du navigateur
+            if (!isMobileDevice) {
+              await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
+            } else {
+              await elementToFullscreen.requestFullscreen();
+            }
+          } else if (elementToFullscreen.webkitRequestFullscreen) {
+            // WebKit (Safari iOS/Android) - peut nécessiter ALLOW_KEYBOARD_INPUT
+            if (Element && Element.ALLOW_KEYBOARD_INPUT) {
+              await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+            } else {
+              await elementToFullscreen.webkitRequestFullscreen();
+            }
+          } else if (elementToFullscreen.mozRequestFullScreen) {
+            await elementToFullscreen.mozRequestFullScreen();
+          } else if (elementToFullscreen.msRequestFullscreen) {
+            await elementToFullscreen.msRequestFullscreen();
+          }
+        } catch (err) {
+          // Si l'option navigationUI échoue, essayer sans option
+          console.log("Fullscreen request failed, trying without options:", err);
+          if (elementToFullscreen.requestFullscreen) {
+            await elementToFullscreen.requestFullscreen();
+          } else if (elementToFullscreen.webkitRequestFullscreen) {
+            if (Element && Element.ALLOW_KEYBOARD_INPUT) {
+              await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+            } else {
+              await elementToFullscreen.webkitRequestFullscreen();
+            }
+          } else if (elementToFullscreen.mozRequestFullScreen) {
+            await elementToFullscreen.mozRequestFullScreen();
+          } else if (elementToFullscreen.msRequestFullscreen) {
+            await elementToFullscreen.msRequestFullscreen();
+          }
         }
 
         setIsFullscreen(true);
