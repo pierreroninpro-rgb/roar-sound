@@ -291,37 +291,21 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const center = rect.width / 2;
         const distance = e.clientX - rect.left - center;
         const screenWidth = window.innerWidth;
+        const containerWidth = rect.width;
 
-        // Au-dessus de 1200px : utiliser une vitesse fixe (comme à 1199px quand le curseur est à l'extrémité)
-        // Désactiver la logique de vitesse variable basée sur la position du curseur
-        if (screenWidth > 1200) {
-            // À 1199px, maxSpeed serait 20 (car 1199 < 1440)
-            // Utiliser la vitesse maximale qu'on aurait à 1199px quand le curseur est à l'extrémité
-            const maxSpeedRef = 20; // Vitesse de référence à 1199px (curseur à l'extrémité)
-            const deadZone = 50;
+        // Calculer la vitesse en % de la largeur de l'écran pour une expérience cohérente
+        // La vitesse maximale est définie en % de la largeur de l'écran
+        const maxSpeedPercent = screenWidth >= 1440 ? 1.0 : 1.3; // % de la largeur de l'écran par frame
+        const maxSpeed = (containerWidth * maxSpeedPercent) / 100; // Convertir % en pixels
+        const deadZonePercent = 3; // Zone morte de 3% de la largeur du conteneur
+        const deadZone = (containerWidth * deadZonePercent) / 100;
 
-            // Utiliser une normalisation fixe (vitesse maximale = 1.0)
-            // Cela donne une vitesse constante indépendante de la position du curseur
-            const normalized = 1.0; // Vitesse maximale fixe (comme si on était à l'extrémité à 1199px)
+        if (Math.abs(distance) > deadZone) {
+            const normalized = (Math.abs(distance) - deadZone) / (center - deadZone);
             const direction = Math.sign(distance);
-
-            if (Math.abs(distance) > deadZone) {
-                targetSpeed.current = direction * maxSpeedRef * normalized ** 2;
-            } else {
-                targetSpeed.current = 0;
-            }
+            targetSpeed.current = direction * maxSpeed * normalized ** 2;
         } else {
-            // En dessous de 1200px : logique normale avec vitesse variable selon la position
-            const maxSpeed = screenWidth >= 1440 ? 15 : 20; // Vitesse réduite à 15 pour les écrans >= 1440px
-            const deadZone = 50;
-
-            if (Math.abs(distance) > deadZone) {
-                const normalized = (Math.abs(distance) - deadZone) / (center - deadZone);
-                const direction = Math.sign(distance);
-                targetSpeed.current = direction * maxSpeed * normalized ** 2;
-            } else {
-                targetSpeed.current = 0;
-            }
+            targetSpeed.current = 0;
         }
     };
 
