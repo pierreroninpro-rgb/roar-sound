@@ -225,6 +225,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     }, [items.length, dimensions, videoList.length]);
 
     const handleMouseMove = (e) => {
+        // Désactiver sur mobile
+        if (isMobile) return;
+        
         if (!isAutoCentering.current && targetItemRef.current) {
             targetItemRef.current = null;
         }
@@ -247,11 +250,15 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleMouseLeave = () => {
+        // Désactiver sur mobile
+        if (isMobile) return;
         targetSpeed.current = 0;
     };
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const touchStartTime = useRef(null);
+    const isSwiping = useRef(false);
 
     const handleTouchStart = (e) => {
         if (!isAutoCentering.current && targetItemRef.current) {
@@ -262,20 +269,86 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         touchX.current = e.touches[0].clientX;
         lastTouchX.current = e.touches[0].clientX;
+        touchStartTime.current = Date.now();
+        isSwiping.current = false;
+        
+        // Arrêter le mouvement en cours
+        targetSpeed.current = 0;
+        speedRef.current = 0;
     };
 
     const handleTouchMove = (e) => {
         if (isAutoCentering.current) return;
+        if (!touchX.current) return;
 
-        const delta = e.touches[0].clientX - lastTouchX.current;
-        targetSpeed.current = -delta * 2.5;
-        lastTouchX.current = e.touches[0].clientX;
+        const currentX = e.touches[0].clientX;
+        const deltaX = currentX - touchX.current;
+        
+        // Détecter si c'est un vrai swipe (mouvement horizontal significatif)
+        if (Math.abs(deltaX) > 10) {
+            isSwiping.current = true;
+            // Empêcher le scroll de la page pendant le swipe
+            e.preventDefault();
+        }
+
+        if (isSwiping.current) {
+            const delta = currentX - lastTouchX.current;
+            
+            // Déplacer directement les items sans inertie
+            setItems((prev) =>
+                prev.map((item) => {
+                    let newX = item.x + delta;
+                    const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+                    
+                    if (newX < -dimensions.cardWidth - dimensions.gap) {
+                        newX += totalWidth;
+                    }
+                    if (newX > totalWidth - dimensions.cardWidth) {
+                        newX -= totalWidth;
+                    }
+                    
+                    return { ...item, x: newX };
+                })
+            );
+        }
+        
+        lastTouchX.current = currentX;
     };
 
     const handleTouchEnd = () => {
-        targetSpeed.current = 0;
+        if (!touchX.current) return;
+        
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - touchStartTime.current;
+        const deltaX = lastTouchX.current - touchX.current;
+        
+        // Si c'est un swipe rapide, ajouter de l'inertie
+        if (isSwiping.current && touchDuration < 300 && Math.abs(deltaX) > 30) {
+            const velocity = deltaX / touchDuration;
+            targetSpeed.current = -velocity * 100; // Ajuster le multiplicateur pour la vitesse
+            
+            // Décélérer progressivement
+            const decelerate = () => {
+                targetSpeed.current *= 0.95;
+                if (Math.abs(targetSpeed.current) < 0.5) {
+                    targetSpeed.current = 0;
+                }
+            };
+            
+            const decelerateInterval = setInterval(() => {
+                decelerate();
+                if (targetSpeed.current === 0) {
+                    clearInterval(decelerateInterval);
+                }
+            }, 16);
+        } else {
+            targetSpeed.current = 0;
+        }
+        
         touchX.current = null;
         lastTouchX.current = null;
+        touchStartTime.current = null;
+        isSwiping.current = false;
     };
 
     const handleClick = (item) => {
