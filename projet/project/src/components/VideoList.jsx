@@ -48,7 +48,6 @@ export default function VideoList({ onFullscreenChange }) {
   const progressBarRef = useRef(null); // Référence pour la barre de progression (mode normal)
   const progressBarFullscreenRef = useRef(null); // Référence pour la barre de progression (plein écran)
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
-  const usedVimeoFullscreenRef = useRef(false); // En mobile plein écran : on utilise uniquement l'UI Vimeo, pas notre barre/close
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -441,7 +440,6 @@ export default function VideoList({ onFullscreenChange }) {
 
     try {
       if (isFullscreen) {
-        usedVimeoFullscreenRef.current = false;
         // Sortir du plein écran
         if (document.exitFullscreen) {
           await document.exitFullscreen();
@@ -471,16 +469,11 @@ export default function VideoList({ onFullscreenChange }) {
 
         if (isMobileDevice && videoRef.current && playerRef.current) {
           try {
-            // Demander le fullscreen via l'API Vimeo Player directement
+            // Mobile : uniquement le plein écran natif Vimeo (pas notre overlay). Le close Vimeo ramène à la page.
             await playerRef.current.requestFullscreen();
-
-            usedVimeoFullscreenRef.current = true; // On n'affiche pas notre barre/close, uniquement Vimeo
-            setIsFullscreen(true);
-            if (onFullscreenChange) onFullscreenChange(true);
-            return; // Sortir ici pour mobile
+            return;
           } catch (err) {
             console.error("Mobile Vimeo fullscreen error:", err);
-            // Si ça échoue, essayer avec l'iframe directement
             try {
               const iframe = videoRef.current;
               if (iframe.requestFullscreen) {
@@ -490,10 +483,6 @@ export default function VideoList({ onFullscreenChange }) {
               } else if (iframe.mozRequestFullScreen) {
                 await iframe.mozRequestFullScreen();
               }
-
-              usedVimeoFullscreenRef.current = true;
-              setIsFullscreen(true);
-              if (onFullscreenChange) onFullscreenChange(true);
               return;
             } catch (fallbackErr) {
               console.error("Fallback fullscreen also failed:", fallbackErr);
