@@ -48,6 +48,13 @@ export default function VideoList({ onFullscreenChange }) {
   const progressBarRef = useRef(null); // Référence pour la barre de progression (mode normal)
   const progressBarFullscreenRef = useRef(null); // Référence pour la barre de progression (plein écran)
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
+  const seekedFromTouchRef = useRef(false); // Évite double seek (touchEnd + click) sur barre
+  const justFinishedDragRef = useRef(false); // Évite seek au click après un drag (release sur la barre)
+  const durationRef = useRef(0); // Cache durée pour drag fluide (éviter await à chaque move)
+  const lastSetCurrentTimeRef = useRef(0); // Throttle setCurrentTime pendant le drag
+  const lastDragPercentageRef = useRef(0); // Dernier % pendant drag (seek final au release)
+  const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
+  const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -329,6 +336,7 @@ export default function VideoList({ onFullscreenChange }) {
     if (videoRef.current && selectedVideo) {
       // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
+      progressRef.current = 0;
 
       if (playerRef.current) {
         try {
@@ -345,10 +353,14 @@ export default function VideoList({ onFullscreenChange }) {
 
           // Listen to timeupdate events for progress
           playerRef.current.on("timeupdate", async (data) => {
+            if (isDraggingProgress.current) return; // Pendant le drag : on garde la position locale, pas de saccade
             try {
               const duration = await playerRef.current.getDuration();
               if (duration && duration > 0) {
-                setProgress((data.seconds / duration) * 100);
+                durationRef.current = duration;
+                const pct = (data.seconds / duration) * 100;
+                progressRef.current = pct;
+                setProgress(pct);
               }
             } catch (err) {
               console.error("Error updating progress:", err);
@@ -824,50 +836,98 @@ export default function VideoList({ onFullscreenChange }) {
   };
 
   // Gérer le drag du curseur de progression
-  const handleProgressDragStart = (e) => {
+  const handleProgressDragStart = async (e) => {
     e.stopPropagation();
     isDraggingProgress.current = true;
     setIsDraggingProgressState(true);
+    didDragMoveRef.current = false;
+    lastDragPercentageRef.current = progressRef.current;
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
+    if (durationRef.current <= 0 && playerRef.current) {
+      try {
+        const d = await playerRef.current.getDuration();
+        if (d > 0) durationRef.current = d;
+      } catch (_) {}
+    }
   };
 
-  const handleProgressDrag = async (e, progressBarElement) => {
+  const handleProgressDrag = (e, progressBarElement) => {
     if (!isDraggingProgress.current || !progressBarElement || !playerRef.current) return;
 
     e.preventDefault();
     e.stopPropagation();
 
     const rect = progressBarElement.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientX = (e.touches?.length ? e.touches[0].clientX : null) ?? e.clientX;
     const clickPosition = Math.max(0, Math.min(rect.width, clientX - rect.left));
     const percentage = (clickPosition / rect.width) * 100;
 
-    try {
-      const duration = await playerRef.current.getDuration();
-      if (duration && duration > 0) {
-        const newTime = (percentage / 100) * duration;
-        if (newTime >= 0 && newTime <= duration) {
-          await playerRef.current.setCurrentTime(newTime);
-          setProgress(percentage);
-        }
-      }
-    } catch (err) {
+    lastDragPercentageRef.current = percentage;
+    progressRef.current = percentage;
+    didDragMoveRef.current = true;
+    setProgress(percentage); // Mise à jour immédiate = curseur fluide (optimistic UI)
+
+    const duration = durationRef.current;
+    if (!(duration > 0)) return;
+
+    const now = Date.now();
+    const throttleMs = 80;
+    if (now - lastSetCurrentTimeRef.current < throttleMs) return;
+    lastSetCurrentTimeRef.current = now;
+
+    const newTime = (percentage / 100) * duration;
+    playerRef.current.setCurrentTime(Math.max(0, Math.min(duration, newTime))).catch((err) => {
       console.error("Error setting time:", err);
-    }
+    });
   };
 
-  const handleProgressDragEnd = () => {
+  const handleProgressDragEnd = async () => {
+    const finalPct = lastDragPercentageRef.current;
+    const dur = durationRef.current;
+    const didMove = didDragMoveRef.current;
     isDraggingProgress.current = false;
     setIsDraggingProgressState(false);
+    justFinishedDragRef.current = true;
+    setTimeout(() => { justFinishedDragRef.current = false; }, 150);
     if (isPlaying) {
       controlsTimeoutRef.current = setTimeout(() => {
         if (!isHovering) {
           setShowControls(false);
         }
       }, 3000);
+    }
+    if (didMove && dur > 0 && playerRef.current && finalPct >= 0 && finalPct <= 100) {
+      try {
+        await playerRef.current.setCurrentTime((finalPct / 100) * dur);
+      } catch (_) {}
+    }
+  };
+
+  const seekBarAtClientX = async (clientX, progressBarEl) => {
+    if (!progressBarEl || !playerRef.current) return;
+    const rect = progressBarEl.getBoundingClientRect();
+    const clickPosition = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    try {
+      const duration = await playerRef.current.getDuration();
+      if (duration && duration > 0) {
+        durationRef.current = duration;
+        const newTime = (clickPosition / rect.width) * duration;
+        if (newTime >= 0 && newTime <= duration) {
+          await playerRef.current.setCurrentTime(newTime);
+          setShowControls(true);
+          if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+          if (isPlaying) {
+            controlsTimeoutRef.current = setTimeout(() => {
+              if (!isHovering) setShowControls(false);
+            }, 3000);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error setting time:", err);
     }
   };
 
@@ -904,17 +964,24 @@ export default function VideoList({ onFullscreenChange }) {
       }
     };
 
-    // Toujours écouter les événements, mais ne traiter que si on est en train de drag
+    const handleTouchCancel = () => {
+      if (isDraggingProgress.current) {
+        handleProgressDragEnd();
+      }
+    };
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchcancel', handleTouchCancel);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchCancel);
     };
   }, [isPlaying, isHovering]);
 
@@ -1146,63 +1213,56 @@ export default function VideoList({ onFullscreenChange }) {
 
                         {/* Barre de progression */}
                         <div
-                          ref={progressBarRef}
-                          className="relative flex-1 h-[1px] bg-gray-600 cursor-pointer rounded-full overflow-visible"
+                          className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
                           onClick={async (e) => {
-                            if (isDraggingProgressState) return; // Ignorer le clic si on est en train de drag
+                            if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
-                            if (playerRef.current) {
-                              const rect = e.target.getBoundingClientRect();
-                              const clickPosition = e.clientX - rect.left;
-
-                              try {
-                                const duration = await playerRef.current.getDuration();
-                                if (duration && duration > 0) {
-                                  const newTime = (clickPosition / rect.width) * duration;
-                                  if (newTime >= 0 && newTime <= duration) {
-                                    await playerRef.current.setCurrentTime(newTime);
-                                    // Réafficher les contrôles après un clic sur la barre
-                                    setShowControls(true);
-                                    if (controlsTimeoutRef.current) {
-                                      clearTimeout(controlsTimeoutRef.current);
-                                    }
-                                    if (isPlaying) {
-                                      controlsTimeoutRef.current = setTimeout(() => {
-                                        setShowControls(false);
-                                      }, 3000);
-                                    }
-                                  }
-                                }
-                              } catch (err) {
-                                console.error("Error setting time:", err);
-                              }
-                            }
+                            seekedFromTouchRef.current = false;
+                            await seekBarAtClientX(e.clientX, progressBarRef.current);
+                          }}
+                          onTouchEnd={(e) => {
+                            if (isDraggingProgressState || justFinishedDragRef.current) return;
+                            if (!e.changedTouches?.length) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            seekedFromTouchRef.current = true;
+                            seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                            setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
                           }}
                         >
                           <div
-                            className="absolute top-0 left-0 h-full bg-white rounded-full"
-                            style={{
-                              width: `${progress}%`,
-                              transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
-                            }}
-                          ></div>
-                          {/* Curseur sur la barre de progression */}
-                          <div
-                            onMouseDown={handleProgressDragStart}
-                            onTouchStart={handleProgressDragStart}
-                            className="absolute top-1/2 bg-white rounded-full"
-                            style={{
-                              left: `calc(${progress}% - 4px)`,
-                              transform: 'translateY(-50%)',
-                              width: '8px',
-                              height: '8px',
-                              cursor: isDraggingProgressState ? 'grabbing' : 'grab',
-                              zIndex: 10,
-                              transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none'
-                            }}
-                          ></div>
+                            ref={progressBarRef}
+                            className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                          >
+                            <div
+                              className="absolute top-0 left-0 h-full bg-white rounded-full"
+                              style={{
+                                width: `${progress}%`,
+                                transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                              }}
+                            />
+                            <div
+                              role="slider"
+                              tabIndex={0}
+                              aria-label="Position dans la vidéo"
+                              aria-valuenow={Math.round(progress)}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              onMouseDown={handleProgressDragStart}
+                              onTouchStart={handleProgressDragStart}
+                              className="absolute top-1/2 bg-white rounded-full touch-none select-none"
+                              style={{
+                                left: `calc(${progress}% - ${(spacing.isMobile ? 28 : 20) / 2}px)`,
+                                transform: 'translateY(-50%)',
+                                width: spacing.isMobile ? 28 : 20,
+                                height: spacing.isMobile ? 28 : 20,
+                                cursor: isDraggingProgressState ? 'grabbing' : 'grab',
+                                zIndex: 10,
+                                transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
+                                touchAction: 'none'
+                              }}
+                            />
+                          </div>
                         </div>
 
                         {/* Icône MUTE/UNMUTE */}
@@ -1444,64 +1504,56 @@ export default function VideoList({ onFullscreenChange }) {
             </div>
             {/* Barre de progression */}
             <div
-              ref={progressBarFullscreenRef}
-              className="relative flex-1 h-1 bg-grey-600 cursor-pointer rounded-full overflow-visible"
+              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
               onClick={async (e) => {
-                if (isDraggingProgressState) return; // Ignorer le clic si on est en train de drag
+                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                 e.stopPropagation();
-                if (playerRef.current) {
-                  const rect = e.target.getBoundingClientRect();
-                  const clickPosition = e.clientX - rect.left;
-
-                  try {
-                    const duration = await playerRef.current.getDuration();
-                    if (duration && duration > 0) {
-                      const newTime = (clickPosition / rect.width) * duration;
-                      if (newTime >= 0 && newTime <= duration) {
-                        await playerRef.current.setCurrentTime(newTime);
-                        setShowControls(true);
-                        if (controlsTimeoutRef.current) {
-                          clearTimeout(controlsTimeoutRef.current);
-                        }
-                        if (isPlaying) {
-                          controlsTimeoutRef.current = setTimeout(() => {
-                            if (!isHovering) {
-                              setShowControls(false);
-                            }
-                          }, 3000);
-                        }
-                      }
-                    }
-                  } catch (err) {
-                    console.error("Error setting time:", err);
-                  }
-                }
+                seekedFromTouchRef.current = false;
+                await seekBarAtClientX(e.clientX, progressBarFullscreenRef.current);
+              }}
+              onTouchEnd={(e) => {
+                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                if (!e.changedTouches?.length) return;
+                e.preventDefault();
+                e.stopPropagation();
+                seekedFromTouchRef.current = true;
+                seekBarAtClientX(e.changedTouches[0].clientX, progressBarFullscreenRef.current);
+                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
               }}
             >
               <div
-                className="absolute top-0 left-0 h-full bg-white rounded-full"
-                style={{
-                  width: `${progress}%`,
-                  transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
-                }}
-              ></div>
-              {/* Curseur sur la barre de progression */}
-              <div
-                onMouseDown={handleProgressDragStart}
-                onTouchStart={handleProgressDragStart}
-                className="absolute top-1/2 bg-white rounded-full"
-                style={{
-                  left: `calc(${progress}% - 4px)`,
-                  transform: 'translateY(-50%)',
-                  width: '8px',
-                  height: '8px',
-                  cursor: isDraggingProgressState ? 'grabbing' : 'grab',
-                  zIndex: 10,
-                  transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none'
-                }}
-              ></div>
+                ref={progressBarFullscreenRef}
+                className="relative w-full h-1 bg-grey-600 rounded-full overflow-visible"
+              >
+                <div
+                  className="absolute top-0 left-0 h-full bg-white rounded-full"
+                  style={{
+                    width: `${progress}%`,
+                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                  }}
+                />
+                <div
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Position dans la vidéo"
+                  aria-valuenow={Math.round(progress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  onMouseDown={handleProgressDragStart}
+                  onTouchStart={handleProgressDragStart}
+                  className="absolute top-1/2 bg-white rounded-full touch-none select-none"
+                  style={{
+                    left: `calc(${progress}% - ${(spacing.isMobile ? 28 : 20) / 2}px)`,
+                    transform: 'translateY(-50%)',
+                    width: spacing.isMobile ? 28 : 20,
+                    height: spacing.isMobile ? 28 : 20,
+                    cursor: isDraggingProgressState ? 'grabbing' : 'grab',
+                    zIndex: 10,
+                    transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
+                    touchAction: 'none'
+                  }}
+                />
+              </div>
             </div>
 
             {/* Icône MUTE/UNMUTE */}
