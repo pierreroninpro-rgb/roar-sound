@@ -15,16 +15,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const videoList = videos || [];
 
-    // Dimensions uniformes
-    const BASE_CARD_WIDTH = 100;
-    const BASE_GAP = 70;
-    const BASE_GAP_MOBILE = 30;
-    const BASE_CARD_HEIGHT = 140;
+    // Dimensions uniformes - toutes les images ont la même largeur
+    const BASE_CARD_WIDTH = 100; // Largeur de base
+    const BASE_GAP = 70; // Gap uniforme entre toutes les images (desktop)
+    const BASE_GAP_MOBILE = 30; // Gap réduit pour mobile
+    const BASE_CARD_HEIGHT = 140; // Hauteur de base réduite pour correspondre à l'espacement
     const TITLE_FONT_SIZE = 16;
 
     const VISIBLE_ITEMS_DESKTOP = 9;
     const VISIBLE_ITEMS_TABLET = 5;
-    const VISIBLE_ITEMS_TABLET_LARGE = 7;
+    const VISIBLE_ITEMS_TABLET_LARGE = 7; // Zone intermédiaire pour 7 images
     const VISIBLE_ITEMS_MOBILE = 3;
 
     const [dimensions, setDimensions] = useState({
@@ -37,11 +37,13 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     useEffect(() => {
         const calculateDimensions = () => {
+            // Utiliser window.innerWidth si le container n'est pas encore monté
             const containerWidth = containerRef.current
                 ? containerRef.current.getBoundingClientRect().width || window.innerWidth
                 : window.innerWidth;
 
             if (containerWidth === 0 || !containerWidth) {
+                // Si on a un ref, réessayer plus tard
                 if (containerRef.current) {
                     requestAnimationFrame(calculateDimensions);
                 }
@@ -49,55 +51,66 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             }
 
             const mobile = containerWidth <= 820;
-            const tablet = containerWidth > 820 && containerWidth < 1024;
-            const tabletLarge = containerWidth >= 900 && containerWidth < 1024;
+            const tablet = containerWidth > 820 && containerWidth < 1174;
+            const tabletLarge = containerWidth >= 900 && containerWidth < 1174; // Zone avec 7 images étendue de 150px
             setIsMobile(mobile);
             setIsTablet(tablet);
             const visibleItems = mobile ? VISIBLE_ITEMS_MOBILE : (tabletLarge ? VISIBLE_ITEMS_TABLET_LARGE : (tablet ? VISIBLE_ITEMS_TABLET : VISIBLE_ITEMS_DESKTOP));
 
+            // Calculer la largeur uniforme pour toutes les images
             let finalCardWidth;
 
             if (mobile) {
-                const mobilePadding = 20;
-                const availableWidth = containerWidth - (2 * mobilePadding);
-                const totalGaps = 2;
+                // Mobile : images plus grandes avec gap réduit
+                const mobilePadding = 20; // Espace à gauche et à droite (40px au total)
+                const availableWidth = containerWidth - (2 * mobilePadding); // Largeur disponible moins les marges
+                const totalGaps = 2; // 2 gaps pour 3 images
                 const availableWidthForCards = Math.max(0, availableWidth - (totalGaps * BASE_GAP_MOBILE));
-                const baseCardWidth = availableWidthForCards / 3;
+                const baseCardWidth = availableWidthForCards / 3; // Largeur de base pour 3 images
 
-                const sizeMultiplier = 1.15;
+                // Augmenter la taille des images (multiplicateur pour les rendre plus grandes)
+                const sizeMultiplier = 1.15; // +15% pour rendre les images plus grandes
                 const scaledCardWidth = baseCardWidth * sizeMultiplier;
 
+                // Utiliser cette largeur si elle permet toujours 3 images
+                // Sinon, ajuster pour garantir 3 images
                 const maxWidthFor3 = (availableWidth - (totalGaps * BASE_GAP_MOBILE)) / 3;
                 finalCardWidth = Math.min(scaledCardWidth, maxWidthFor3);
 
-                const MAX_CARD_WIDTH_MOBILE = 120;
+                // Limiter la taille maximale pour éviter que les images soient trop grandes près de 820px
+                const MAX_CARD_WIDTH_MOBILE = 120; // Largeur maximale pour les images en mobile (réduite pour voir les titres)
                 finalCardWidth = Math.min(finalCardWidth, MAX_CARD_WIDTH_MOBILE);
 
+                // S'assurer que la largeur est valide et positive
                 if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH;
+                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
                 }
             } else {
-                const totalGaps = visibleItems - 1;
+                // Desktop/Tablet : calcul normal
+                const totalGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
                 const availableWidthForCards = Math.max(0, containerWidth - (totalGaps * BASE_GAP));
                 const uniformCardWidth = availableWidthForCards / visibleItems;
 
                 finalCardWidth = uniformCardWidth;
 
+                // Limiter les tailles pour éviter les valeurs aberrantes
                 if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH;
+                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
                 }
             }
 
+            // La hauteur reste proportionnelle à la largeur
             const aspectRatio = BASE_CARD_HEIGHT / BASE_CARD_WIDTH;
             let finalCardHeight = finalCardWidth * aspectRatio;
 
+            // Agrandir de 5px en version desktop uniquement
             if (!mobile) {
                 finalCardHeight += 5;
             }
 
             setDimensions({
                 cardWidth: finalCardWidth,
-                gap: mobile ? BASE_GAP_MOBILE : BASE_GAP,
+                gap: mobile ? BASE_GAP_MOBILE : BASE_GAP, // Gap réduit pour mobile, normal pour desktop
                 cardHeight: finalCardHeight
             });
         };
@@ -111,144 +124,91 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         return () => window.removeEventListener('resize', handleResize);
     }, [videoList.length]);
 
-    // ✅ FIX : Initialisation des positions avec duplication (3 copies) pour boucle infinie fluide
     useEffect(() => {
         if (!videoList.length || dimensions.cardWidth === 0) return;
 
+        // Positions simples : toutes les images avec la même largeur et le même gap
         const gap = dimensions.gap;
         const cardWidth = dimensions.cardWidth;
-        const singleSetWidth = (cardWidth + gap) * videoList.length;
 
+        // Pour mobile, ajouter une marge à gauche pour centrer les 3 images visibles
         let startX = 0;
         if (isMobile) {
-            const mobilePadding = 20;
-            startX = mobilePadding;
+            const mobilePadding = 20; // Même padding que dans le calcul des dimensions
+            const totalWidthFor3Items = (3 * cardWidth) + (2 * gap); // 3 images + 2 gaps
+            startX = mobilePadding; // Commencer après la marge gauche
         }
 
-        // Dupliquer les items 3 fois pour une boucle continue sans zones blanches
-        const initialPositions = [];
-        for (let copy = 0; copy < 3; copy++) {
-            videoList.forEach((v, i) => {
-                const x = startX + (copy * singleSetWidth) + i * (cardWidth + gap);
-                initialPositions.push({ ...v, id: `${v.id}-copy-${copy}`, originalId: v.id, x });
-            });
-        }
-        
+        const initialPositions = videoList.map((v, i) => {
+            const x = startX + i * (cardWidth + gap);
+            return { ...v, x };
+        });
         setItems(initialPositions);
     }, [videos, dimensions, isMobile]);
 
-    // ✅ FIX : Boucle d'animation optimisée sans saccades
     useEffect(() => {
-        if (dimensions.cardWidth === 0 || items.length === 0) return;
+        if (dimensions.cardWidth === 0) return;
 
-        // Calculer la largeur d'un seul set (avec duplication ×3)
-        const stride = dimensions.cardWidth + dimensions.gap;
-        const setWidth = stride * videoList.length; // Largeur d'UNE copie
-        
-        // Centraliser les bornes de recyclage (calculées une seule fois)
-        const startX = isMobile ? 20 : 0;
-        const minX = startX - setWidth; // Limite gauche (sortie du set 0)
-        const maxX = startX + setWidth * 2; // Limite droite (sortie du set 2)
-        
-        let lastTime = performance.now();
+        // Calculer totalWidth
+        const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
 
-        const loop = (currentTime) => {
-            if (!containerRef.current || items.length === 0) {
+        const loop = () => {
+            if (!containerRef.current || items.length === 0 || totalWidth === 0) {
                 animationRef.current = requestAnimationFrame(loop);
                 return;
             }
 
-            const deltaTime = currentTime - lastTime;
-            lastTime = currentTime;
-            // Normaliser le deltaTime pour éviter les saccades sur les écrans à faible framerate
-            const normalizedDelta = Math.min(deltaTime / 16.67, 2.0); // 16.67ms = 60fps
-
             if (isAutoCentering.current && targetItemRef.current) {
+                const itemToCenter = targetItemRef.current;
                 const rect = containerRef.current.getBoundingClientRect();
                 const center = rect.width / 2;
 
                 setItems((prev) => {
-                    // Trouver la copie la plus proche du centre pour l'item ciblé
-                    const rect = containerRef.current.getBoundingClientRect();
-                    const center = rect.width / 2;
-                    const targetOriginalId = targetItemRef.current.originalId || targetItemRef.current.id;
-                    
-                    // Trouver toutes les copies de cet item
-                    const copies = prev.filter((v) => (v.originalId || v.id) === targetOriginalId);
-                    if (copies.length === 0) return prev;
-                    
-                    // Trouver la copie la plus proche du centre
-                    let currentItem = copies[0];
-                    let minDist = Math.abs((currentItem.x + dimensions.cardWidth / 2) - center);
-                    copies.forEach((copy) => {
-                        const dist = Math.abs((copy.x + dimensions.cardWidth / 2) - center);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            currentItem = copy;
-                        }
-                    });
-                    
+                    const currentItem = prev.find((v) => v.id === itemToCenter.id);
                     if (!currentItem) return prev;
 
+                    // Toutes les images ont la même largeur maintenant
                     const itemWidth = dimensions.cardWidth;
                     const itemCenter = currentItem.x + itemWidth / 2;
                     let distance = center - itemCenter;
 
-                    // Normaliser la distance pour choisir le chemin le plus court (basé sur setWidth)
-                    if (distance > setWidth / 2) distance -= setWidth;
-                    if (distance < -setWidth / 2) distance += setWidth;
+                    if (distance > totalWidth / 2) distance -= totalWidth;
+                    if (distance < -totalWidth / 2) distance += totalWidth;
 
                     if (Math.abs(distance) < 0.5) {
                         isAutoCentering.current = false;
                         targetSpeed.current = 0;
+
+                        // Libérer après un court délai pour réactiver le carrousel
+                        centerPauseTimeout.current = setTimeout(() => {
+                            targetItemRef.current = null;
+                        }, 300); // 300ms = délai court mais suffisant
+
                         return prev;
                     }
 
-                    // Vitesse normalisée par le deltaTime pour une animation fluide
-                    const speed = distance * 0.1 * normalizedDelta;
+                    const speed = distance * 0.1;
 
                     return prev.map((item) => {
                         let newX = item.x + speed;
-                        
-                        // ✅ Boucle infinie avec duplication ×3 - recyclage basé sur setWidth
-                        // Trop à gauche → on pousse de 3 sets à droite (retour au set 2)
-                        if (newX < minX) {
-                            newX += setWidth * 3;
-                        }
-                        // Trop à droite → on tire de 3 sets à gauche (retour au set 0)
-                        if (newX > maxX) {
-                            newX -= setWidth * 3;
-                        }
-                        
+                        if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
+                        if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
                         return { ...item, x: newX };
                     });
                 });
-            } else {
-                // ✅ Interpolation douce de la vitesse avec facteur amélioré (0.12 au lieu de 0.08)
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.12;
+            }
 
-                if (Math.abs(speedRef.current) < 0.01) {
-                    speedRef.current = 0;
-                }
+            if (!isAutoCentering.current && !targetItemRef.current) {
+                speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
 
-                if (Math.abs(speedRef.current) > 0.001) {
-                    // Appliquer la vitesse normalisée par le deltaTime
-                    const appliedSpeed = speedRef.current * normalizedDelta;
-                    
+                if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
+
+                if (speedRef.current !== 0) {
                     setItems((prev) =>
                         prev.map((item) => {
-                            let newX = item.x - appliedSpeed;
-                            
-                            // ✅ Boucle infinie avec duplication ×3 - recyclage basé sur setWidth
-                            // Trop à gauche → on pousse de 3 sets à droite (retour au set 2)
-                            if (newX < minX) {
-                                newX += setWidth * 3;
-                            }
-                            // Trop à droite → on tire de 3 sets à gauche (retour au set 0)
-                            if (newX > maxX) {
-                                newX -= setWidth * 3;
-                            }
-                            
+                            let newX = item.x - speedRef.current;
+                            if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
+                            if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
                             return { ...item, x: newX };
                         })
                     );
@@ -260,176 +220,81 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         animationRef.current = requestAnimationFrame(loop);
         return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-            if (centerPauseTimeout.current) {
-                clearTimeout(centerPauseTimeout.current);
-            }
+            cancelAnimationFrame(animationRef.current);
+            if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
         };
-    }, [items.length, dimensions, videoList.length]);
+    }, [videos, items.length, dimensions, isMobile, isTablet]);
 
     const handleMouseMove = (e) => {
-        // Désactiver sur mobile
-        if (isMobile) return;
-        
+        // Libérer le verrouillage dès qu'on bouge la souris (sauf pendant l'auto-centrage)
         if (!isAutoCentering.current && targetItemRef.current) {
             targetItemRef.current = null;
         }
 
-        if (isAutoCentering.current) return;
+        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
         const rect = containerRef.current.getBoundingClientRect();
-        const containerWidth = rect.width;
-        const center = containerWidth / 2;
+        const center = rect.width / 2;
         const distance = e.clientX - rect.left - center;
-        const maxSpeed = 12; // Ajusté à 12 pour un bon équilibre (entre 8 et 20)
+        const maxSpeed = 20;
         const deadZone = 50;
 
         if (Math.abs(distance) > deadZone) {
-            // Limiter la largeur effective à 1024px pour les écrans plus grands
-            // Cela permet de plafonner la vitesse à celle d'un écran de 1024px
-            const effectiveWidth = Math.min(containerWidth, 1024);
-            const effectiveCenter = effectiveWidth / 2;
-            
-            // Calculer la distance normalisée basée sur la largeur effective
-            const normalized = (Math.abs(distance) - deadZone) / (effectiveCenter - deadZone);
-            // Limiter la normalisation à 1.0 pour éviter les vitesses excessives
-            const clampedNormalized = Math.min(normalized, 1.0);
+            const normalized = (Math.abs(distance) - deadZone) / (center - deadZone);
             const direction = Math.sign(distance);
-            targetSpeed.current = direction * maxSpeed * clampedNormalized ** 2;
+            targetSpeed.current = direction * maxSpeed * normalized ** 2;
         } else {
             targetSpeed.current = 0;
         }
     };
 
     const handleMouseLeave = () => {
-        // Désactiver sur mobile
-        if (isMobile) return;
+        // Réinitialiser la vitesse quand la souris sort
         targetSpeed.current = 0;
     };
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
-    const touchStartTime = useRef(null);
-    const isSwiping = useRef(false);
 
     const handleTouchStart = (e) => {
+        // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
         if (!isAutoCentering.current && targetItemRef.current) {
             targetItemRef.current = null;
         }
 
-        if (isAutoCentering.current) return;
+        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
         touchX.current = e.touches[0].clientX;
         lastTouchX.current = e.touches[0].clientX;
-        touchStartTime.current = Date.now();
-        isSwiping.current = false;
-        
-        // Arrêter le mouvement en cours
-        targetSpeed.current = 0;
-        speedRef.current = 0;
     };
 
     const handleTouchMove = (e) => {
-        if (isAutoCentering.current) return;
-        if (!touchX.current) return;
+        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
-        const currentX = e.touches[0].clientX;
-        const deltaX = currentX - touchX.current;
-        
-        // Détecter si c'est un vrai swipe (mouvement horizontal significatif)
-        if (Math.abs(deltaX) > 10) {
-            isSwiping.current = true;
-            // Empêcher le scroll de la page pendant le swipe
-            e.preventDefault();
-        }
-
-        if (isSwiping.current) {
-            const delta = currentX - lastTouchX.current;
-            
-            // Réduire la sensibilité du mouvement sur mobile (facteur 0.7)
-            const reducedDelta = delta * 0.7;
-            
-            // Déplacer directement les items sans inertie
-            const stride = dimensions.cardWidth + dimensions.gap;
-            const setWidth = stride * videoList.length; // Largeur d'UNE copie
-            const startX = isMobile ? 20 : 0;
-            const minX = startX - setWidth; // Limite gauche (sortie du set 0)
-            const maxX = startX + setWidth * 2; // Limite droite (sortie du set 2)
-            
-            setItems((prev) =>
-                prev.map((item) => {
-                    let newX = item.x + reducedDelta;
-                    
-                    // ✅ Boucle infinie avec duplication ×3 - recyclage basé sur setWidth
-                    // Trop à gauche → on pousse de 3 sets à droite (retour au set 2)
-                    if (newX < minX) {
-                        newX += setWidth * 3;
-                    }
-                    // Trop à droite → on tire de 3 sets à gauche (retour au set 0)
-                    if (newX > maxX) {
-                        newX -= setWidth * 3;
-                    }
-                    
-                    return { ...item, x: newX };
-                })
-            );
-        }
-        
-        lastTouchX.current = currentX;
+        const delta = e.touches[0].clientX - lastTouchX.current;
+        // Vitesse augmentée pour mobile (2.5x au lieu de 1.2x)
+        targetSpeed.current = -delta * 2.5;
+        lastTouchX.current = e.touches[0].clientX;
     };
 
     const handleTouchEnd = () => {
-        if (!touchX.current) return;
-        
-        const touchEndTime = Date.now();
-        const touchDuration = touchEndTime - touchStartTime.current;
-        const deltaX = lastTouchX.current - touchX.current;
-        
-        // Si c'est un swipe rapide, ajouter de l'inertie
-        if (isSwiping.current && touchDuration < 300 && Math.abs(deltaX) > 30) {
-            const velocity = deltaX / touchDuration;
-            // Réduire la vitesse mobile (de 100 à 30 pour ralentir significativement)
-            targetSpeed.current = -velocity * 30;
-            
-            // Décélérer progressivement
-            const decelerate = () => {
-                targetSpeed.current *= 0.95;
-                if (Math.abs(targetSpeed.current) < 0.5) {
-                    targetSpeed.current = 0;
-                }
-            };
-            
-            const decelerateInterval = setInterval(() => {
-                decelerate();
-                if (targetSpeed.current === 0) {
-                    clearInterval(decelerateInterval);
-                }
-            }, 16);
-        } else {
-            targetSpeed.current = 0;
-        }
-        
+        // Réinitialiser la vitesse à la fin du touch
+        targetSpeed.current = 0;
         touchX.current = null;
         lastTouchX.current = null;
-        touchStartTime.current = null;
-        isSwiping.current = false;
     };
 
     const handleClick = (item) => {
         if (!containerRef.current || items.length === 0) return;
 
+        // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
 
-        // Trouver l'item original pour onSelectVideo
-        const originalItem = videoList.find((v) => v.id === (item.originalId || item.id));
-        const itemToSelect = originalItem || item;
-
-        targetItemRef.current = item; // Garder la copie pour le centrage
+        // Libérer la cible précédente si on clique sur une nouvelle image
+        targetItemRef.current = item;
         isAutoCentering.current = true;
 
-        onSelectVideo(itemToSelect);
+        onSelectVideo(item);
     };
 
     useEffect(() => {
@@ -449,15 +314,21 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             }
         });
 
-        // Utiliser l'item original (sans la copie) pour setCenterVideo
-        if (closest) {
-            const originalItem = videoList.find((v) => v.id === (closest.originalId || closest.id));
-            setCenterVideo(originalItem || closest);
-        } else {
-            setCenterVideo(null);
-        }
-    }, [items, dimensions, videoList]);
+        setCenterVideo(closest);
+    }, [items, dimensions]);
 
+    // Debug : afficher les dimensions
+    console.log('Carrousel state:', {
+        videoListLength: videoList.length,
+        cardWidth: dimensions.cardWidth,
+        cardHeight: dimensions.cardHeight,
+        gap: dimensions.gap,
+        itemsLength: items.length,
+        isMobile,
+        isTablet
+    });
+
+    // Ne pas rendre si pas de vidéos ou dimensions invalides
     if (!videoList.length) {
         return (
             <div className="w-full relative md:mb-0 md:mt-0" style={{ overflow: 'visible', minHeight: '200px' }}>
@@ -493,7 +364,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 ref={containerRef}
                 className="relative bg-transparent cursor-pointer"
                 style={{
-                    height: `${dimensions.cardHeight + 8 + 50}px`,
+                    height: `${dimensions.cardHeight + 8 + 50}px`, // Image + margin-top (8px) + titre (~50px pour s'assurer que les titres sont visibles)
                     minHeight: '200px',
                     width: '100%',
                     overflow: isMobile ? 'hidden' : 'visible'
@@ -505,20 +376,21 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 onTouchEnd={handleTouchEnd}
             >
                 {items.length > 0 ? items.map((item, i) => {
+                    // Toutes les images ont la même largeur et hauteur
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
 
                     return (
                         <div
-                            key={`${item.id}-${i}`}
+                            key={item.id + "-" + i}
                             className="absolute"
                             style={{
                                 left: `${itemX}px`,
                                 width: `${itemWidth}px`,
                                 bottom: "0px",
                                 zIndex: 50,
-                                willChange: "transform",
+                                willChange: "transform, opacity",
                             }}
                         >
                             <img
@@ -537,8 +409,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
                                     fontSize: isMobile ? "12px" : `${TITLE_FONT_SIZE}px`,
-                                    borderBottom: selectedVideo && selectedVideo.id === (item.originalId || item.id) ? '0.5px solid currentColor' : 'none',
-                                    paddingBottom: selectedVideo && selectedVideo.id === (item.originalId || item.id) ? '1px' : '0',
+                                    borderBottom: selectedVideo && selectedVideo.id === item.id ? '0.5px solid currentColor' : 'none',
+                                    paddingBottom: selectedVideo && selectedVideo.id === item.id ? '1px' : '0',
                                     display: 'block',
                                     textAlign: 'center',
                                     width: '100%'

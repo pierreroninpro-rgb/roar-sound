@@ -1,0 +1,292 @@
+import { useRef, useEffect, useState } from "react";
+
+export default function Carousel({ videos, onSelectVideo, selectedVideo, carouselBottomMargin = 60 }) {
+  const containerRef = useRef(null);
+  const animationRef = useRef();
+  const [items, setItems] = useState([]);
+  const [centerVideo, setCenterVideo] = useState(null);
+
+  const speedRef = useRef(0);
+  const targetSpeed = useRef(0);
+
+  const isAutoCentering = useRef(false);
+  const targetItemRef = useRef(null);
+
+  const videoList = videos || [];
+
+  const DIMENSIONS_DESKTOP = {
+    center: { width: 120, height: 210 },
+    adjacent: { width: 110, height: 200 },
+    others: { width: 100, height: 180 }
+  };
+  const GAP_DESKTOP = 70;
+  const TITLE_FONT_SIZE = 16;
+
+  const VISIBLE_ITEMS_DESKTOP = 9;
+  const VISIBLE_ITEMS_TABLET = 5;
+  const VISIBLE_ITEMS_MOBILE = 3;
+
+  const [dimensions, setDimensions] = useState({
+    cardWidth: 100,
+    gap: 60,
+    centerWidth: 120,
+    adjacentWidth: 110,
+    centerHeight: 210,
+    adjacentHeight: 200,
+    othersHeight: 180
+  });
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  // -------------------------------
+  // CALCUL DIMENSIONS RESPONSIVE
+  // -------------------------------
+  useEffect(() => {
+    const calculateDimensions = () => {
+      if (!containerRef.current) return;
+      const containerWidth = containerRef.current.getBoundingClientRect().width || window.innerWidth;
+
+      const mobile = containerWidth < 768;
+      const tablet = containerWidth >= 768 && containerWidth < 1024;
+      setIsMobile(mobile);
+      setIsTablet(tablet);
+
+      if (mobile) {
+        const scale = containerWidth / 390;
+        setDimensions({
+          cardWidth: 86 * scale,
+          sideWidth: 72 * scale,
+          centerHeight: 154 * scale,
+          sideHeight: 129 * scale,
+          gap: 34 * scale
+        });
+      } else if (tablet) {
+        const scale = containerWidth / (DIMENSIONS_DESKTOP.center.width + 4 * DIMENSIONS_DESKTOP.others.width + 4 * GAP_DESKTOP);
+        setDimensions({
+          cardWidth: DIMENSIONS_DESKTOP.others.width * scale,
+          centerWidth: DIMENSIONS_DESKTOP.center.width * scale,
+          centerHeight: DIMENSIONS_DESKTOP.center.height * scale,
+          othersHeight: DIMENSIONS_DESKTOP.others.height * scale,
+          gap: GAP_DESKTOP * scale
+        });
+      } else {
+        const scale = containerWidth / (DIMENSIONS_DESKTOP.center.width + 2 * DIMENSIONS_DESKTOP.adjacent.width + 6 * DIMENSIONS_DESKTOP.others.width + 8 * GAP_DESKTOP);
+        setDimensions({
+          cardWidth: DIMENSIONS_DESKTOP.others.width * scale,
+          centerWidth: DIMENSIONS_DESKTOP.center.width * scale,
+          adjacentWidth: DIMENSIONS_DESKTOP.adjacent.width * scale,
+          centerHeight: DIMENSIONS_DESKTOP.center.height,
+          adjacentHeight: DIMENSIONS_DESKTOP.adjacent.height,
+          othersHeight: DIMENSIONS_DESKTOP.others.height,
+          gap: GAP_DESKTOP * scale
+        });
+      }
+    };
+
+    calculateDimensions();
+    window.addEventListener("resize", calculateDimensions);
+    return () => window.removeEventListener("resize", calculateDimensions);
+  }, [videoList.length]);
+
+  // -------------------------------
+  // INITIALISATION POSITIONS
+  // -------------------------------
+  useEffect(() => {
+    if (!videoList.length || !dimensions.cardWidth) return;
+
+    const containerWidth = containerRef.current.getBoundingClientRect().width;
+    const centerIndex = Math.floor(videoList.length / 2);
+    const initialPositions = videoList.map((v, i) => {
+      let x = 0;
+      const offset = i - centerIndex;
+
+      if (isMobile) {
+        const figmaCenterX = 152 * (containerWidth / 390);
+        const figmaSideX = 46 * (containerWidth / 390);
+        const figmaRightX = 273 * (containerWidth / 390);
+
+        if (offset === -1) x = figmaSideX;
+        else if (offset === 0) x = figmaCenterX;
+        else if (offset === 1) x = figmaRightX;
+        else x = figmaSideX + (i - (centerIndex - 1)) * (dimensions.cardWidth + dimensions.gap);
+      } else if (isTablet) {
+        const totalWidth = 2 * dimensions.cardWidth + dimensions.centerWidth + 2 * dimensions.cardWidth + 4 * dimensions.gap;
+        const startX = (containerWidth - totalWidth) / 2;
+        if (i < 2) x = startX + i * (dimensions.cardWidth + dimensions.gap);
+        else if (i === 2) x = startX + 2 * (dimensions.cardWidth + dimensions.gap);
+        else x = startX + 2 * (dimensions.cardWidth + dimensions.gap) + dimensions.centerWidth + dimensions.gap + (i - 3) * (dimensions.cardWidth + dimensions.gap);
+      } else {
+        x = i * (dimensions.cardWidth + dimensions.gap);
+      }
+
+      return { ...v, x };
+    });
+
+    setItems(initialPositions);
+  }, [videos, dimensions, isMobile, isTablet]);
+
+  // -------------------------------
+  // MOTEUR ANIMATION
+  // -------------------------------
+  useEffect(() => {
+    if (!items.length) return;
+
+    const loop = () => {
+      setItems((prev) => {
+        if (isAutoCentering.current && targetItemRef.current) {
+          // Auto-center
+          const rect = containerRef.current.getBoundingClientRect();
+          const center = rect.width / 2;
+          const target = targetItemRef.current;
+          const current = prev.find((v) => v.id === target.id);
+          if (!current) return prev;
+
+          const itemCenter = current.x + dimensions.cardWidth / 2;
+          const distance = center - itemCenter;
+          if (Math.abs(distance) < 0.5) {
+            isAutoCentering.current = false;
+            targetItemRef.current = null;
+            return prev;
+          }
+
+          const speed = distance * 0.1;
+          return prev.map((item) => ({ ...item, x: item.x + speed }));
+        } else {
+          // Mouvement souris / inertie
+          speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
+          if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
+
+          if (speedRef.current !== 0) {
+            return prev.map((item) => {
+              let newX = item.x - speedRef.current;
+              // Boucle infinie simple
+              const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+              if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
+              if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
+              return { ...item, x: newX };
+            });
+          }
+        }
+        return prev;
+      });
+
+      animationRef.current = requestAnimationFrame(loop);
+    };
+
+    animationRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [items.length, dimensions, videoList.length, isMobile]);
+
+  // -------------------------------
+  // GESTION SOURIS
+  // -------------------------------
+  const handleMouseMove = (e) => {
+    if (isMobile) return;
+    if (isAutoCentering.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const center = rect.width / 2;
+    const distance = e.clientX - rect.left - center;
+    const maxSpeed = 12;
+    const deadZone = 50;
+
+    if (Math.abs(distance) > deadZone) {
+      const normalized = (Math.abs(distance) - deadZone) / (center - deadZone);
+      targetSpeed.current = Math.sign(distance) * maxSpeed * Math.min(normalized, 1) ** 2;
+    } else targetSpeed.current = 0;
+  };
+
+  const handleMouseLeave = () => {
+    if (isMobile) return;
+    targetSpeed.current = 0;
+  };
+
+  // -------------------------------
+  // CLICK AUTO-CENTER
+  // -------------------------------
+  const handleClick = (item) => {
+    targetItemRef.current = item;
+    isAutoCentering.current = true;
+    onSelectVideo(item);
+  };
+
+  return (
+    <div className="w-full relative overflow-hidden md:mb-0 md:mt-0">
+      <div
+        ref={containerRef}
+        className="relative bg-transparent cursor-pointer"
+        style={{ height: `${dimensions.centerHeight + 60}px` }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        {items.map((item, i) => {
+          let itemWidth, itemHeight;
+          const rect = containerRef.current?.getBoundingClientRect();
+          const center = rect ? rect.width / 2 : 0;
+          const itemCenter = item.x + dimensions.cardWidth / 2;
+          const distance = Math.abs(itemCenter - center);
+
+          if (isMobile) {
+            itemWidth = dimensions.cardWidth;
+            itemHeight = dimensions.centerHeight;
+          } else if (isTablet) {
+            itemWidth = i === 2 ? dimensions.centerWidth : dimensions.cardWidth;
+            itemHeight = i === 2 ? dimensions.centerHeight : dimensions.othersHeight;
+          } else {
+            // Desktop scaling comme ancien coverflow
+            const zone = dimensions.cardWidth + dimensions.gap;
+            const centerW = dimensions.centerWidth;
+            const adjacentW = dimensions.adjacentWidth;
+            const centerH = dimensions.centerHeight;
+            const adjacentH = dimensions.adjacentHeight;
+            const othersW = dimensions.cardWidth;
+            const othersH = dimensions.othersHeight;
+
+            if (distance < zone * 0.5) {
+              const p = distance / (zone * 0.5);
+              itemWidth = centerW - (centerW - adjacentW) * p;
+              itemHeight = centerH - (centerH - adjacentH) * p;
+            } else if (distance < zone * 1.5) {
+              const p = (distance - zone * 0.5) / zone;
+              itemWidth = adjacentW - (adjacentW - othersW) * p;
+              itemHeight = adjacentH - (adjacentH - othersH) * p;
+            } else {
+              itemWidth = othersW;
+              itemHeight = othersH;
+            }
+          }
+
+          return (
+            <div
+              key={item.id + "-" + i}
+              className="absolute"
+              style={{
+                left: `${item.x}px`,
+                width: `${itemWidth}px`,
+                bottom: 0,
+                zIndex: 50,
+              }}
+            >
+              <img
+                src={item.thumbnail || item.url}
+                alt={item.title || item.alt}
+                onClick={() => handleClick(item)}
+                className="w-full cursor-pointer"
+                style={{ height: `${itemHeight}px`, objectFit: "cover" }}
+              />
+              <div
+                className="text-center font-HelveticaNeue font-light whitespace-nowrap pt-2"
+                style={{
+                  fontSize: `${TITLE_FONT_SIZE}px`,
+                  marginTop: "8px"
+                }}
+              >
+                {item.title || item.alt || ""}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
