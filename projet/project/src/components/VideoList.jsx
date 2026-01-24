@@ -463,34 +463,39 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // **NOUVEAU : Détecter mobile et utiliser webkitEnterFullscreen**
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-          (window.innerWidth <= 820);
+      // **NOUVEAU : Détecter mobile et déclencher fullscreen Vimeo**
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+(window.innerWidth <= 820);
 
-        if (isMobileDevice && videoRef.current) {
-          // Sur mobile : utiliser le plein écran natif Vimeo
-          try {
-            const iframe = videoRef.current;
-
-            // iOS Safari
-            if (iframe.webkitEnterFullscreen) {
-              iframe.webkitEnterFullscreen();
-            }
-            // Android Chrome
-            else if (iframe.requestFullscreen) {
-              await iframe.requestFullscreen();
-            }
-            else if (iframe.webkitRequestFullscreen) {
-              await iframe.webkitRequestFullscreen();
-            }
-
-            setIsFullscreen(true);
-            if (onFullscreenChange) onFullscreenChange(true);
-            return; // Sortir ici pour mobile
-          } catch (err) {
-            console.error("Mobile fullscreen error:", err);
-          }
-        }
+if (isMobileDevice && videoRef.current && playerRef.current) {
+try {
+  // Demander le fullscreen via l'API Vimeo Player directement
+  await playerRef.current.requestFullscreen();
+  
+  setIsFullscreen(true);
+  if (onFullscreenChange) onFullscreenChange(true);
+  return; // Sortir ici pour mobile
+} catch (err) {
+  console.error("Mobile Vimeo fullscreen error:", err);
+  // Si ça échoue, essayer avec l'iframe directement
+  try {
+    const iframe = videoRef.current;
+    if (iframe.requestFullscreen) {
+      await iframe.requestFullscreen();
+    } else if (iframe.webkitRequestFullscreen) {
+      await iframe.webkitRequestFullscreen();
+    } else if (iframe.mozRequestFullScreen) {
+      await iframe.mozRequestFullScreen();
+    }
+    
+    setIsFullscreen(true);
+    if (onFullscreenChange) onFullscreenChange(true);
+    return;
+  } catch (fallbackErr) {
+    console.error("Fallback fullscreen also failed:", fallbackErr);
+  }
+}
+}
 
         // **Desktop : ton code actuel**
         const elementToFullscreen = document.documentElement;
@@ -1048,8 +1053,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <iframe
                       ref={videoRef}
                       key={selectedVideo.id}
-                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=${spacing.isMobile ? '1' : '0'}&responsive=1`} className={isFullscreen ? "pointer-events-none" : "absolute top-0 left-0 w-full h-full pointer-events-none"}
-                      style={{
+                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1`}                      style={{
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
                         width: isFullscreen ? '100vw' : '100%',
                         height: isFullscreen ? '100vh' : '100%',
@@ -1066,11 +1070,12 @@ export default function VideoList({ onFullscreenChange }) {
                       allow="autoplay; picture-in-picture; fullscreen"
                       allowFullScreen
                       webkitAllowFullScreen
+                      mozallowfullscreen
                       title={selectedVideo.title}
                     />
 
                     {/* Navbar en bas - Mode normal */}
-                    {!isFullscreen && !spacing.isMobile && (
+                    {!isFullscreen && (
                       <div
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
