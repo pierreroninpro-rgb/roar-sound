@@ -48,6 +48,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressBarRef = useRef(null); // Référence pour la barre de progression (mode normal)
   const progressBarFullscreenRef = useRef(null); // Référence pour la barre de progression (plein écran)
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
+  const usedVimeoFullscreenRef = useRef(false); // En mobile plein écran : on utilise uniquement l'UI Vimeo, pas notre barre/close
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -440,6 +441,7 @@ export default function VideoList({ onFullscreenChange }) {
 
     try {
       if (isFullscreen) {
+        usedVimeoFullscreenRef.current = false;
         // Sortir du plein écran
         if (document.exitFullscreen) {
           await document.exitFullscreen();
@@ -463,39 +465,41 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-      // **NOUVEAU : Détecter mobile et déclencher fullscreen Vimeo**
-const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-(window.innerWidth <= 820);
+        // **NOUVEAU : Détecter mobile et déclencher fullscreen Vimeo**
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+          (window.innerWidth <= 820);
 
-if (isMobileDevice && videoRef.current && playerRef.current) {
-try {
-  // Demander le fullscreen via l'API Vimeo Player directement
-  await playerRef.current.requestFullscreen();
-  
-  setIsFullscreen(true);
-  if (onFullscreenChange) onFullscreenChange(true);
-  return; // Sortir ici pour mobile
-} catch (err) {
-  console.error("Mobile Vimeo fullscreen error:", err);
-  // Si ça échoue, essayer avec l'iframe directement
-  try {
-    const iframe = videoRef.current;
-    if (iframe.requestFullscreen) {
-      await iframe.requestFullscreen();
-    } else if (iframe.webkitRequestFullscreen) {
-      await iframe.webkitRequestFullscreen();
-    } else if (iframe.mozRequestFullScreen) {
-      await iframe.mozRequestFullScreen();
-    }
-    
-    setIsFullscreen(true);
-    if (onFullscreenChange) onFullscreenChange(true);
-    return;
-  } catch (fallbackErr) {
-    console.error("Fallback fullscreen also failed:", fallbackErr);
-  }
-}
-}
+        if (isMobileDevice && videoRef.current && playerRef.current) {
+          try {
+            // Demander le fullscreen via l'API Vimeo Player directement
+            await playerRef.current.requestFullscreen();
+
+            usedVimeoFullscreenRef.current = true; // On n'affiche pas notre barre/close, uniquement Vimeo
+            setIsFullscreen(true);
+            if (onFullscreenChange) onFullscreenChange(true);
+            return; // Sortir ici pour mobile
+          } catch (err) {
+            console.error("Mobile Vimeo fullscreen error:", err);
+            // Si ça échoue, essayer avec l'iframe directement
+            try {
+              const iframe = videoRef.current;
+              if (iframe.requestFullscreen) {
+                await iframe.requestFullscreen();
+              } else if (iframe.webkitRequestFullscreen) {
+                await iframe.webkitRequestFullscreen();
+              } else if (iframe.mozRequestFullScreen) {
+                await iframe.mozRequestFullScreen();
+              }
+
+              usedVimeoFullscreenRef.current = true;
+              setIsFullscreen(true);
+              if (onFullscreenChange) onFullscreenChange(true);
+              return;
+            } catch (fallbackErr) {
+              console.error("Fallback fullscreen also failed:", fallbackErr);
+            }
+          }
+        }
 
         // **Desktop : ton code actuel**
         const elementToFullscreen = document.documentElement;
@@ -1053,7 +1057,7 @@ try {
                     <iframe
                       ref={videoRef}
                       key={selectedVideo.id}
-                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1`}                      style={{
+                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1`} style={{
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
                         width: isFullscreen ? '100vw' : '100%',
                         height: isFullscreen ? '100vh' : '100%',
