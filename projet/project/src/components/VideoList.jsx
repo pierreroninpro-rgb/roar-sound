@@ -1048,8 +1048,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <iframe
                       ref={videoRef}
                       key={selectedVideo.id}
-                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1`}
-                      className={isFullscreen ? "pointer-events-none" : "absolute top-0 left-0 w-full h-full pointer-events-none"}
+                      src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=${spacing.isMobile ? '1' : '0'}&responsive=1`} className={isFullscreen ? "pointer-events-none" : "absolute top-0 left-0 w-full h-full pointer-events-none"}
                       style={{
                         zIndex: 1, // Z-index bas pour que la navbar passe au-dessus
                         width: isFullscreen ? '100vw' : '100%',
@@ -1071,7 +1070,7 @@ export default function VideoList({ onFullscreenChange }) {
                     />
 
                     {/* Navbar en bas - Mode normal */}
-                    {!isFullscreen && (
+                    {!isFullscreen && !spacing.isMobile && (
                       <div
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
