@@ -433,13 +433,14 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
+
   const handleFullscreen = async () => {
     const container = videoContainerRef.current;
     if (!container) return;
 
     try {
       if (isFullscreen) {
-        // Sortir du plein écran et déverrouiller l'orientation
+        // Sortir du plein écran
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
@@ -462,24 +463,46 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // Sur mobile, utiliser le conteneur vidéo directement (iOS Safari ne supporte pas bien document.documentElement)
-        // Sur desktop, utiliser document.documentElement pour un vrai plein écran navigateur
+        // **NOUVEAU : Détecter mobile et utiliser webkitEnterFullscreen**
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-          (window.innerWidth <= 768);
+          (window.innerWidth <= 820);
 
-        const elementToFullscreen = isMobileDevice ? container : document.documentElement;
+        if (isMobileDevice && videoRef.current) {
+          // Sur mobile : utiliser le plein écran natif Vimeo
+          try {
+            const iframe = videoRef.current;
 
-        // Essayer d'abord avec navigationUI (peut ne pas fonctionner sur tous les navigateurs)
+            // iOS Safari
+            if (iframe.webkitEnterFullscreen) {
+              iframe.webkitEnterFullscreen();
+            }
+            // Android Chrome
+            else if (iframe.requestFullscreen) {
+              await iframe.requestFullscreen();
+            }
+            else if (iframe.webkitRequestFullscreen) {
+              await iframe.webkitRequestFullscreen();
+            }
+
+            setIsFullscreen(true);
+            if (onFullscreenChange) onFullscreenChange(true);
+            return; // Sortir ici pour mobile
+          } catch (err) {
+            console.error("Mobile fullscreen error:", err);
+          }
+        }
+
+        // **Desktop : ton code actuel**
+        const elementToFullscreen = document.documentElement;
+
         try {
           if (elementToFullscreen.requestFullscreen) {
-            // Sur desktop, essayer avec navigationUI: 'hide' pour cacher l'UI du navigateur
             if (!isMobileDevice) {
               await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
             } else {
               await elementToFullscreen.requestFullscreen();
             }
           } else if (elementToFullscreen.webkitRequestFullscreen) {
-            // WebKit (Safari iOS/Android) - peut nécessiter ALLOW_KEYBOARD_INPUT
             if (Element && Element.ALLOW_KEYBOARD_INPUT) {
               await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
             } else {
@@ -491,7 +514,6 @@ export default function VideoList({ onFullscreenChange }) {
             await elementToFullscreen.msRequestFullscreen();
           }
         } catch (err) {
-          // Si l'option navigationUI échoue, essayer sans option
           console.log("Fullscreen request failed, trying without options:", err);
           if (elementToFullscreen.requestFullscreen) {
             await elementToFullscreen.requestFullscreen();
@@ -511,37 +533,24 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
 
-        // En plein écran, permettre le verrouillage de l'orientation en paysage si possible
-        // Cela permet de regarder les vidéos en mode paysage même sur mobile
+        // Reste du code pour desktop (orientation lock, etc.)
         try {
-          // Attendre un peu pour que le plein écran soit complètement activé
           await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Essayer de verrouiller en paysage pour une meilleure expérience vidéo
-          // Note: Cela nécessite que l'utilisateur soit déjà en mode paysage ou que le navigateur le permette
-          if (screen.orientation && screen.orientation.lock) {
-            // Ne pas forcer l'orientation, mais permettre le paysage si l'utilisateur le souhaite
-            // screen.orientation.lock('landscape').catch(() => {
-            //   console.log("Orientation lock not allowed - user needs to rotate manually");
-            // });
-          }
         } catch (orientationErr) {
           console.log("Screen Orientation API not available:", orientationErr);
         }
 
-        // Calculer les dimensions pour letterboxing
+        // Calculer les dimensions pour letterboxing (desktop uniquement)
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         const aspectRatio = 16 / 9;
 
         let iframeWidth, iframeHeight;
 
-        // Si l'écran est plus large que le ratio 16:9, on limite par la hauteur
         if (screenWidth / screenHeight > aspectRatio) {
           iframeHeight = screenHeight;
           iframeWidth = screenHeight * aspectRatio;
         } else {
-          // Sinon, on limite par la largeur
           iframeWidth = screenWidth;
           iframeHeight = screenWidth / aspectRatio;
         }
@@ -555,6 +564,7 @@ export default function VideoList({ onFullscreenChange }) {
       console.error("Error toggling fullscreen:", err);
     }
   };
+
 
   // Écouter les changements de plein écran et gérer les événements en mode plein écran
   useEffect(() => {
@@ -1055,6 +1065,8 @@ export default function VideoList({ onFullscreenChange }) {
                       }}
                       frameBorder="0"
                       allow="autoplay; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      webkitAllowFullScreen
                       title={selectedVideo.title}
                     />
 
@@ -1219,29 +1231,31 @@ export default function VideoList({ onFullscreenChange }) {
                           />
                         </div>
 
-                        {/* Bouton Fullscreen - Toujours visible, même en plein écran */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFullscreen();
-                          }}
-                          className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
-                          style={{
-                            pointerEvents: 'auto',
-                            padding: '0.25rem'
-                          }}
-                        >
-                          <img
-                            src="/images/open.png"
-                            alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-                            style={{
-                              display: 'block',
-                              width: `${spacing.openIconWidth}px`,
-                              height: `${spacing.openIconHeight}px`,
-                              marginBottom: spacing.isMobile ? '3px' : '0'
+                        {/* Bouton Fullscreen - Masqué en plein écran mobile natif */}
+                        {!(spacing.isMobile && isFullscreen) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFullscreen();
                             }}
-                          />
-                        </button>
+                            className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                            style={{
+                              pointerEvents: 'auto',
+                              padding: '0.25rem'
+                            }}
+                          >
+                            <img
+                              src="/images/open.png"
+                              alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+                              style={{
+                                display: 'block',
+                                width: `${spacing.openIconWidth}px`,
+                                height: `${spacing.openIconHeight}px`,
+                                marginBottom: spacing.isMobile ? '3px' : '0'
+                              }}
+                            />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
