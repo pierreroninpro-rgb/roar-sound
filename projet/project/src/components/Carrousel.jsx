@@ -130,7 +130,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         let startX = 0;
         if (isMobile) {
             const mobilePadding = 20; // Même padding que dans le calcul des dimensions
-            const totalWidthFor3Items = (3 * cardWidth) + (2 * gap); // 3 images + 2 gaps
             startX = mobilePadding; // Commencer après la marge gauche
         }
 
@@ -173,12 +172,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     if (Math.abs(distance) < 0.5) {
                         isAutoCentering.current = false;
                         targetSpeed.current = 0;
-
-                        // Ne pas libérer automatiquement - rester centré
-                        // centerPauseTimeout.current = setTimeout(() => {
-                        //   targetItemRef.current = null;
-                        // }, 500);
-
                         return prev;
                     }
 
@@ -186,82 +179,43 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
                     return prev.map((item) => {
                         let newX = item.x + speed;
-                        if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                        if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
+                        // Boucle infinie avec gestion cohérente
+                        while (newX < -(dimensions.cardWidth + dimensions.gap)) {
+                            newX += totalWidth;
+                        }
+                        while (newX > totalWidth) {
+                            newX -= totalWidth;
+                        }
                         return { ...item, x: newX };
                     });
                 });
             }
 
             if (!isAutoCentering.current && !targetItemRef.current) {
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
-
+                if (isInertiaScroll.current) {
+                    targetSpeed.current *= 0.95;
+                    if (Math.abs(targetSpeed.current) < 0.3) {
+                        targetSpeed.current = 0;
+                        isInertiaScroll.current = false;
+                    }
+                }
+                speedRef.current += (targetSpeed.current - speedRef.current) * 0.15;
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
 
                 if (speedRef.current !== 0) {
-                    const rect = containerRef.current.getBoundingClientRect();
-                    const containerWidth = rect.width;
-                    
-                    setItems((prev) => {
-                        // Déplacer toutes les images d'abord
-                        const movedItems = prev.map((item) => ({
-                            ...item,
-                            x: item.x - speedRef.current
-                        }));
-                        
-                        // Appliquer le wrapping en maintenant la continuité
-                        return movedItems.map((item) => {
-                            let newX = item.x;
-                            
-                            // À gauche : repositionner à droite pour boucle infinie
-                            // On repositionne AVANT que l'image ne sorte complètement pour entrée progressive
-                            if (newX + dimensions.cardWidth < 0) {
-                                // Trouver la position de la dernière image qui est encore visible à droite
-                                // (dont le bord droit est encore dans ou proche de la zone visible)
-                                const visibleItems = movedItems.filter(i => {
-                                    if (i.id === item.id) return false;
-                                    const itemRight = i.x + dimensions.cardWidth;
-                                    return itemRight > 0 && itemRight <= containerWidth + dimensions.cardWidth;
-                                });
-                                
-                                if (visibleItems.length > 0) {
-                                    // Trouver la plus à droite parmi les visibles
-                                    const rightmost = visibleItems.reduce((max, curr) => 
-                                        curr.x > max.x ? curr : max
-                                    );
-                                    // Placer juste après, mais en s'assurant qu'elle entre progressivement
-                                    newX = rightmost.x + dimensions.cardWidth + dimensions.gap;
-                                } else {
-                                    // Si aucune image visible, placer juste à droite de l'écran pour entrée progressive
-                                    newX = containerWidth + dimensions.gap;
-                                }
+                    setItems((prev) =>
+                        prev.map((item) => {
+                            let newX = item.x - speedRef.current;
+                            // Boucle infinie avec marge de sécurité pour éviter les chevauchements
+                            while (newX < -(dimensions.cardWidth + dimensions.gap)) {
+                                newX += totalWidth;
                             }
-                            
-                            // À droite : repositionner à gauche pour boucle infinie  
-                            // On repositionne juste avant la première image visible à gauche pour entrée progressive
-                            if (newX > totalWidth - dimensions.cardWidth) {
-                                // Trouver la position de la première image qui est encore visible à gauche
-                                const visibleItems = movedItems.filter(i => {
-                                    if (i.id === item.id) return false;
-                                    return i.x < containerWidth && i.x >= -dimensions.cardWidth;
-                                });
-                                
-                                if (visibleItems.length > 0) {
-                                    // Trouver la plus à gauche parmi les visibles
-                                    const leftmost = visibleItems.reduce((min, curr) => 
-                                        curr.x < min.x ? curr : min
-                                    );
-                                    // Placer juste avant pour entrée progressive
-                                    newX = leftmost.x - dimensions.cardWidth - dimensions.gap;
-                                } else {
-                                    // Si aucune image visible, placer juste à gauche de l'écran
-                                    newX = -dimensions.cardWidth - dimensions.gap;
-                                }
+                            while (newX > totalWidth) {
+                                newX -= totalWidth;
                             }
-                            
                             return { ...item, x: newX };
-                        });
-                    });
+                        })
+                    );
                 }
             }
 
@@ -305,31 +259,51 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const touchVelocityRef = useRef(0);
+    const lastTouchTimeRef = useRef(0);
+    const isInertiaScroll = useRef(false);
 
     const handleTouchStart = (e) => {
-        // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
         if (!isAutoCentering.current && targetItemRef.current) {
             targetItemRef.current = null;
         }
-
-        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
+        if (isAutoCentering.current) return;
 
         touchX.current = e.touches[0].clientX;
         lastTouchX.current = e.touches[0].clientX;
+        lastTouchTimeRef.current = performance.now();
+        touchVelocityRef.current = 0;
+        isInertiaScroll.current = false;
     };
 
     const handleTouchMove = (e) => {
-        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
+        if (isAutoCentering.current) return;
 
+        const now = performance.now();
+        const dt = Math.max(now - lastTouchTimeRef.current, 1);
         const delta = e.touches[0].clientX - lastTouchX.current;
-        // Vitesse augmentée pour mobile (2.5x au lieu de 1.2x)
-        targetSpeed.current = -delta * 2.5;
+
+        // Défilement direct 1:1 avec le doigt - ultra fluide
+        targetSpeed.current = -delta;
+        
+        // Calcul de la vélocité pour l'inertie uniquement
+        const instantVelocity = -delta * (1000 / dt);
+        touchVelocityRef.current = instantVelocity * 0.2 + touchVelocityRef.current * 0.8;
+
         lastTouchX.current = e.touches[0].clientX;
+        lastTouchTimeRef.current = now;
+
+        e.preventDefault();
     };
 
     const handleTouchEnd = () => {
-        // Réinitialiser la vitesse à la fin du touch
-        targetSpeed.current = 0;
+        const momentum = touchVelocityRef.current * 0.1;
+        const sign = Math.sign(momentum);
+        const capped = Math.min(Math.abs(momentum), 20) * sign;
+        targetSpeed.current = capped;
+        speedRef.current = capped;
+        isInertiaScroll.current = true;
+
         touchX.current = null;
         lastTouchX.current = null;
     };
@@ -347,14 +321,17 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         onSelectVideo(item);
     };
 
+    const lastCenterUpdate = useRef(0);
     useEffect(() => {
         if (!containerRef.current || !items.length || dimensions.cardWidth === 0) return;
+        const now = performance.now();
+        if (now - lastCenterUpdate.current < 80) return;
+        lastCenterUpdate.current = now;
+
         const rect = containerRef.current.getBoundingClientRect();
         const center = rect.width / 2;
-
         let closest = null;
         let minDist = Infinity;
-
         items.forEach((item) => {
             const itemCenter = item.x + dimensions.cardWidth / 2;
             const distance = Math.abs(itemCenter - center);
@@ -363,20 +340,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 closest = item;
             }
         });
-
         setCenterVideo(closest);
     }, [items, dimensions]);
-
-    // Debug : afficher les dimensions
-    console.log('Carrousel state:', {
-        videoListLength: videoList.length,
-        cardWidth: dimensions.cardWidth,
-        cardHeight: dimensions.cardHeight,
-        gap: dimensions.gap,
-        itemsLength: items.length,
-        isMobile,
-        isTablet
-    });
 
     // Ne pas rendre si pas de vidéos ou dimensions invalides
     if (!videoList.length) {
@@ -414,10 +379,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 ref={containerRef}
                 className="relative bg-transparent cursor-pointer"
                 style={{
-                    height: `${dimensions.cardHeight + 8 + 50}px`, // Image + margin-top (8px) + titre (~50px pour s'assurer que les titres sont visibles)
+                    height: `${dimensions.cardHeight + 8 + 50}px`,
                     minHeight: '200px',
                     width: '100%',
-                    overflow: isMobile ? 'hidden' : 'visible'
+                    overflow: isMobile ? 'hidden' : 'visible',
+                    touchAction: isMobile ? 'pan-y' : 'auto',
                 }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -430,17 +396,26 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
+                    
+                    // En mobile, masquer les éléments hors viewport pour éviter les chevauchements de titres
+                    const containerWidth = containerRef.current?.getBoundingClientRect().width || 0;
+                    const isVisible = isMobile 
+                        ? (itemX > -itemWidth - 50 && itemX < containerWidth + 50)
+                        : true;
+
+                    if (!isVisible && isMobile) return null;
 
                     return (
                         <div
-                            key={item.id + "-" + i}
+                            key={item.id}
                             className="absolute"
                             style={{
-                                left: `${itemX}px`,
+                                left: 0,
                                 width: `${itemWidth}px`,
                                 bottom: "0px",
                                 zIndex: 50,
-                                willChange: "transform, opacity",
+                                willChange: "transform",
+                                transform: `translate3d(${itemX}px, 0, 0)`,
                             }}
                         >
                             <img
@@ -454,7 +429,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 }}
                             />
                             <div
-                                className="text-center font-HelveticaNeue font-light whitespace-nowrap pt-2 text-grey-darker"
+                                className="text-center font-HelveticaNeue font-light pt-2 text-grey-darker"
                                 style={{
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
@@ -463,7 +438,10 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                     paddingBottom: selectedVideo && selectedVideo.id === item.id ? '1px' : '0',
                                     display: 'block',
                                     textAlign: 'center',
-                                    width: '100%'
+                                    width: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
                                 }}
                             >
                                 {item.title || item.alt || ""}
