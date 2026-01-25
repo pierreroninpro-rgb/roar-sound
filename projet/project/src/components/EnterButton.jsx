@@ -21,17 +21,22 @@ const EnterButton = ({ show }) => {
   if (!show) return null;
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center z-[100] pointer-events-auto">
+    <div 
+      className="absolute inset-0 flex flex-col items-center justify-center z-[100] pointer-events-none"
+      onClick={(e) => e.stopPropagation()}
+    >
       <button
         ref={enterButtonRef}
-        className="font-HelveticaNeue font-[400] text-[16px] md:text-[30px] text-custom-grey cursor-pointer"
+        className="font-HelveticaNeue font-[400] text-[16px] md:text-[30px] text-custom-grey cursor-pointer pointer-events-auto"
         style={{
           fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
           transition: 'none',
           transform: 'none',
-          pointerEvents: 'auto'
         }}
-        onClick={() => (window.location.href = '/Projects')}
+        onClick={(e) => {
+          e.stopPropagation();
+          window.location.href = '/Projects';
+        }}
       >
         Enter
       </button>

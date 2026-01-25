@@ -24,6 +24,8 @@ const LoaderHome = ({ overlayRef }) => {
         <div
             ref={overlayRef}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black z-50"
+            onClick={(e) => e.stopPropagation()}
+            style={{ pointerEvents: 'auto' }}
         >
             <div className="flex space-x-2">
                 {[...Array(5)].map((_, i) => (

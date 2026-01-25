@@ -51,8 +51,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             }
 
             const mobile = containerWidth <= 820;
-            const tablet = containerWidth > 820 && containerWidth < 1174;
-            const tabletLarge = containerWidth >= 900 && containerWidth < 1174; // Zone avec 7 images étendue de 150px
+            const tablet = containerWidth > 820 && containerWidth < 1024;
+            const tabletLarge = containerWidth >= 900 && containerWidth < 1024; // Zone avec 7 images
             setIsMobile(mobile);
             setIsTablet(tablet);
             const visibleItems = mobile ? VISIBLE_ITEMS_MOBILE : (tabletLarge ? VISIBLE_ITEMS_TABLET_LARGE : (tablet ? VISIBLE_ITEMS_TABLET : VISIBLE_ITEMS_DESKTOP));
@@ -102,11 +102,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             // La hauteur reste proportionnelle à la largeur
             const aspectRatio = BASE_CARD_HEIGHT / BASE_CARD_WIDTH;
             let finalCardHeight = finalCardWidth * aspectRatio;
-
-            // Agrandir de 5px en version desktop uniquement
-            if (!mobile) {
-                finalCardHeight += 5;
-            }
 
             setDimensions({
                 cardWidth: finalCardWidth,
@@ -179,10 +174,10 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                         isAutoCentering.current = false;
                         targetSpeed.current = 0;
 
-                        // Libérer après un court délai pour réactiver le carrousel
-                        centerPauseTimeout.current = setTimeout(() => {
-                            targetItemRef.current = null;
-                        }, 300); // 300ms = délai court mais suffisant
+                        // Ne pas libérer automatiquement - rester centré
+                        // centerPauseTimeout.current = setTimeout(() => {
+                        //   targetItemRef.current = null;
+                        // }, 500);
 
                         return prev;
                     }
@@ -204,14 +199,69 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
 
                 if (speedRef.current !== 0) {
-                    setItems((prev) =>
-                        prev.map((item) => {
-                            let newX = item.x - speedRef.current;
-                            if (newX < -dimensions.cardWidth - dimensions.gap) newX += totalWidth;
-                            if (newX > totalWidth - dimensions.cardWidth) newX -= totalWidth;
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const containerWidth = rect.width;
+                    
+                    setItems((prev) => {
+                        // Déplacer toutes les images d'abord
+                        const movedItems = prev.map((item) => ({
+                            ...item,
+                            x: item.x - speedRef.current
+                        }));
+                        
+                        // Appliquer le wrapping en maintenant la continuité
+                        return movedItems.map((item) => {
+                            let newX = item.x;
+                            
+                            // À gauche : repositionner à droite pour boucle infinie
+                            // On repositionne AVANT que l'image ne sorte complètement pour entrée progressive
+                            if (newX + dimensions.cardWidth < 0) {
+                                // Trouver la position de la dernière image qui est encore visible à droite
+                                // (dont le bord droit est encore dans ou proche de la zone visible)
+                                const visibleItems = movedItems.filter(i => {
+                                    if (i.id === item.id) return false;
+                                    const itemRight = i.x + dimensions.cardWidth;
+                                    return itemRight > 0 && itemRight <= containerWidth + dimensions.cardWidth;
+                                });
+                                
+                                if (visibleItems.length > 0) {
+                                    // Trouver la plus à droite parmi les visibles
+                                    const rightmost = visibleItems.reduce((max, curr) => 
+                                        curr.x > max.x ? curr : max
+                                    );
+                                    // Placer juste après, mais en s'assurant qu'elle entre progressivement
+                                    newX = rightmost.x + dimensions.cardWidth + dimensions.gap;
+                                } else {
+                                    // Si aucune image visible, placer juste à droite de l'écran pour entrée progressive
+                                    newX = containerWidth + dimensions.gap;
+                                }
+                            }
+                            
+                            // À droite : repositionner à gauche pour boucle infinie  
+                            // On repositionne juste avant la première image visible à gauche pour entrée progressive
+                            if (newX > totalWidth - dimensions.cardWidth) {
+                                // Trouver la position de la première image qui est encore visible à gauche
+                                const visibleItems = movedItems.filter(i => {
+                                    if (i.id === item.id) return false;
+                                    return i.x < containerWidth && i.x >= -dimensions.cardWidth;
+                                });
+                                
+                                if (visibleItems.length > 0) {
+                                    // Trouver la plus à gauche parmi les visibles
+                                    const leftmost = visibleItems.reduce((min, curr) => 
+                                        curr.x < min.x ? curr : min
+                                    );
+                                    // Placer juste avant pour entrée progressive
+                                    newX = leftmost.x - dimensions.cardWidth - dimensions.gap;
+                                } else {
+                                    // Si aucune image visible, placer juste à gauche de l'écran
+                                    newX = -dimensions.cardWidth - dimensions.gap;
+                                }
+                            }
+                            
                             return { ...item, x: newX };
-                        })
-                    );
+                        });
+                    });
                 }
             }
 

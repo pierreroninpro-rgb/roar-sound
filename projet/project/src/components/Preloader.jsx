@@ -4,7 +4,18 @@ import { gsap } from 'gsap';
 const Preloader = ({ onComplete, duration = 500 }) => {
   const [opacity, setOpacity] = useState(1);
   const [scale, setScale] = useState(0.7); // Commence petit
+  const [isMobile, setIsMobile] = useState(false);
   const loaderRef = useRef([]);
+
+  // Détecter si on est sur mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 820);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Animation d'agrandissement jusqu'à 30% de plus (1.3)
@@ -70,8 +81,8 @@ const Preloader = ({ onComplete, duration = 500 }) => {
         <div
           style={{
             position: 'relative',
-            width: '150px',
-            height: '150px',
+            width: isMobile ? '75px' : '150px',
+            height: isMobile ? '75px' : '150px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -95,8 +106,8 @@ const Preloader = ({ onComplete, duration = 500 }) => {
         <div
           style={{
             display: 'flex',
-            gap: '8px',
-            marginTop: '3px',
+            gap: isMobile ? '4px' : '8px',
+            marginTop: isMobile ? '1.5px' : '3px',
             alignItems: 'center',
             justifyContent: 'center'
           }}
@@ -106,8 +117,8 @@ const Preloader = ({ onComplete, duration = 500 }) => {
               key={i}
               ref={(el) => (loaderRef.current[i] = el)}
               style={{
-                width: '12px',
-                height: '12px',
+                width: isMobile ? '6px' : '12px',
+                height: isMobile ? '6px' : '12px',
                 borderRadius: '50%',
                 backgroundColor: '#000'
               }}

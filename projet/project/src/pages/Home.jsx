@@ -72,13 +72,35 @@ const Home = () => {
         gsap.to(videoRef.current, { opacity: 1, duration: 1 });
     };
 
+    // Gestionnaire de clic pour rediriger vers Projects (sauf sur navbar et sound button)
+    const handlePageClick = (e) => {
+        // Ne pas rediriger si on clique sur la navbar ou le sound button
+        // Ces éléments ont déjà leur propre gestionnaire de clic
+        if (e.target.closest('[data-exclude-click]')) {
+            return;
+        }
+        
+        // Ne rediriger que si le chargement est terminé
+        if (!loading) {
+            window.location.href = '/Projects';
+        }
+    };
+
     return (
-        <div className="relative w-screen h-[100dvh] scrollbar-hide" style={{
-            overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
-            overflowX: 'hidden'
-        }}>
+        <div 
+            className="relative w-screen h-[100dvh] scrollbar-hide cursor-pointer" 
+            onClick={handlePageClick}
+            style={{
+                overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
+                overflowX: 'hidden'
+            }}
+        >
             {/* Navbar avec marge top responsive */}
-            <div className="relative z-[300] font-HelveticaNeue font-[400] text-custom-grey">
+            <div 
+                className="relative z-[300] font-HelveticaNeue font-[400] text-custom-grey"
+                data-exclude-click
+                onClick={(e) => e.stopPropagation()}
+            >
                 <Navbar />
             </div>
 
@@ -86,11 +108,23 @@ const Home = () => {
             <VideoPlayer onVideoLoad={handleVideoLoad} videoRef={videoRef} />
 
             {/* Loader original */}
-            {loading && <LoaderHome overlayRef={overlayRef} />}
+            {loading && (
+                <div 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ pointerEvents: 'auto' }}
+                >
+                    <LoaderHome overlayRef={overlayRef} />
+                </div>
+            )}
 
             {/* Contenu après chargement - toujours rendus mais cachés jusqu'à ce que loading soit false */}
             <EnterButton show={!loading} />
-            <SoundButton videoRef={videoRef} show={!loading} />
+            <div 
+                data-exclude-click
+                onClick={(e) => e.stopPropagation()}
+            >
+                <SoundButton videoRef={videoRef} show={!loading} />
+            </div>
         </div>
     );
 };

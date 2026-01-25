@@ -52,6 +52,7 @@ const SoundButton = ({ videoRef, show }) => {
         bottom: 'max(4.13px, env(safe-area-inset-bottom))',
         right: '0',
       }}
+      onClick={(e) => e.stopPropagation()}
     >
       <button
         ref={soundButtonRef}

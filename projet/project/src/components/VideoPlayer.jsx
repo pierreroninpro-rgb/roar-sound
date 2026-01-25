@@ -26,7 +26,7 @@ const VideoPlayer = ({ onVideoLoad, videoRef }) => {
       <iframe
         ref={iframeRef}
         onLoad={handleLoad}
-        src="https://player.vimeo.com/video/1128797324?autoplay=1&loop=1&muted=1&background=1&quality=360p"
+        src="https://player.vimeo.com/video/1151588642?autoplay=1&loop=1&muted=1&background=1&quality=360p"
         className="absolute top-1/2 left-1/2"
         style={{
           width: 'max(100vw, 177.78vh)', // Prend la plus grande valeur pour couvrir tout l'écran
