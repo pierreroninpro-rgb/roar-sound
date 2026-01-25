@@ -119,21 +119,32 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             startX = mobilePadding;
         }
 
-        // Initialiser avec les positions de base
-        const initialPositions = videoList.map((v, i) => {
-            const x = startX + i * (cardWidth + gap);
-            return { ...v, x, originalId: v.id };
+        // Créer 3 copies de la liste
+        const tripleList = [...videoList, ...videoList, ...videoList];
+        const singleSetWidth = videoList.length * (cardWidth + gap);
+        
+        const initialPositions = tripleList.map((v, i) => {
+            const setIndex = Math.floor(i / videoList.length);
+            const itemIndex = i % videoList.length;
+            // Démarrer avec le set du milieu (setIndex 1)
+            const x = startX + (itemIndex * (cardWidth + gap)) + ((setIndex - 1) * singleSetWidth);
+            return { 
+                ...v, 
+                x, 
+                originalId: v.id, 
+                id: `${v.id}-set${setIndex}-idx${itemIndex}` 
+            };
         });
         setItems(initialPositions);
     }, [videos, dimensions, isMobile]);
 
     useEffect(() => {
-        if (dimensions.cardWidth === 0 || !videoList.length) return;
+        if (dimensions.cardWidth === 0) return;
 
-        const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+        const singleSetWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
 
         const loop = () => {
-            if (!containerRef.current || items.length === 0 || totalWidth === 0) {
+            if (!containerRef.current || items.length === 0 || singleSetWidth === 0) {
                 animationRef.current = requestAnimationFrame(loop);
                 return;
             }
@@ -144,13 +155,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 const center = rect.width / 2;
 
                 setItems((prev) => {
-                    const currentItem = prev.find((v) => v.originalId === itemToCenter.originalId);
+                    const currentItem = prev.find((v) => v.id === itemToCenter.id);
                     if (!currentItem) return prev;
 
                     const itemWidth = dimensions.cardWidth;
                     const itemCenter = currentItem.x + itemWidth / 2;
                     let distance = center - itemCenter;
 
+                    const totalWidth = singleSetWidth * 3;
                     if (distance > totalWidth / 2) distance -= totalWidth;
                     if (distance < -totalWidth / 2) distance += totalWidth;
 
@@ -165,12 +177,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     return prev.map((item) => {
                         let newX = item.x + speed;
                         
-                        // Wrapping infini
-                        if (newX < -(dimensions.cardWidth + dimensions.gap)) {
-                            newX += totalWidth;
+                        // Repositionnement par set complet
+                        while (newX < -singleSetWidth) {
+                            newX += singleSetWidth;
                         }
-                        if (newX > totalWidth - dimensions.cardWidth) {
-                            newX -= totalWidth;
+                        while (newX > singleSetWidth * 2) {
+                            newX -= singleSetWidth;
                         }
                         return { ...item, x: newX };
                     });
@@ -179,13 +191,13 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
             if (!isAutoCentering.current && !targetItemRef.current) {
                 if (isInertiaScroll.current) {
-                    targetSpeed.current *= 0.88; // Décélération plus rapide
-                    if (Math.abs(targetSpeed.current) < 0.8) { // Seuil d'arrêt plus élevé
+                    targetSpeed.current *= 0.95;
+                    if (Math.abs(targetSpeed.current) < 0.3) {
                         targetSpeed.current = 0;
                         isInertiaScroll.current = false;
                     }
                 }
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.2; // Réactivité augmentée
+                speedRef.current += (targetSpeed.current - speedRef.current) * 0.15;
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
 
                 if (speedRef.current !== 0) {
@@ -193,12 +205,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                         prev.map((item) => {
                             let newX = item.x - speedRef.current;
                             
-                            // Wrapping infini
-                            if (newX < -(dimensions.cardWidth + dimensions.gap)) {
-                                newX += totalWidth;
+                            // Repositionnement par set complet
+                            while (newX < -singleSetWidth) {
+                                newX += singleSetWidth;
                             }
-                            if (newX > totalWidth - dimensions.cardWidth) {
-                                newX -= totalWidth;
+                            while (newX > singleSetWidth * 2) {
+                                newX -= singleSetWidth;
                             }
                             return { ...item, x: newX };
                         })
@@ -214,7 +226,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             cancelAnimationFrame(animationRef.current);
             if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
         };
-    }, [videos, items.length, dimensions, isMobile, isTablet, videoList.length]);
+    }, [videos, items.length, dimensions, isMobile, isTablet]);
 
     const handleMouseMove = (e) => {
         if (!isAutoCentering.current && targetItemRef.current) {
@@ -280,9 +292,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleTouchEnd = () => {
-        const momentum = touchVelocityRef.current * 0.05; // Réduit de 0.1 à 0.05
+        const momentum = touchVelocityRef.current * 0.1;
         const sign = Math.sign(momentum);
-        const capped = Math.min(Math.abs(momentum), 12) * sign; // Réduit de 20 à 12
+        const capped = Math.min(Math.abs(momentum), 20) * sign;
         targetSpeed.current = capped;
         speedRef.current = capped;
         isInertiaScroll.current = true;
@@ -347,29 +359,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         );
     }
 
-    // Rendu avec clonage dynamique côté render
-    const containerWidth = containerRef.current?.getBoundingClientRect().width || 0;
-    const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
-    
-    // Générer les clones nécessaires pour remplir le viewport + marges
-    const renderMargin = dimensions.cardWidth * 5; // Large marge
-    const itemsToRender = [];
-    
-    items.forEach((item) => {
-        // Clone à gauche
-        if (item.x + dimensions.cardWidth > -renderMargin && item.x < 0) {
-            itemsToRender.push({ ...item, x: item.x + totalWidth, cloneKey: 'left' });
-        }
-        // Original
-        if (item.x + dimensions.cardWidth > -renderMargin && item.x < containerWidth + renderMargin) {
-            itemsToRender.push({ ...item, cloneKey: 'original' });
-        }
-        // Clone à droite
-        if (item.x < containerWidth + renderMargin && item.x + dimensions.cardWidth > containerWidth) {
-            itemsToRender.push({ ...item, x: item.x - totalWidth, cloneKey: 'right' });
-        }
-    });
-
     return (
         <div
             className="w-full relative md:mb-0 md:mt-0"
@@ -397,14 +386,21 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
             >
-                {itemsToRender.map((item, i) => {
+                {items.length > 0 ? items.map((item, i) => {
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
+                    
+                    // Large marge de rendu pour éviter les blancs
+                    const containerWidth = containerRef.current?.getBoundingClientRect().width || 0;
+                    const renderMargin = itemWidth * 3; // Marge très large
+                    const isVisible = itemX > -itemWidth - renderMargin && itemX < containerWidth + renderMargin;
+
+                    if (!isVisible) return null;
 
                     return (
                         <div
-                            key={`${item.originalId}-${item.cloneKey}-${i}`}
+                            key={item.id}
                             className="absolute"
                             style={{
                                 left: 0,
@@ -447,7 +443,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                             </div>
                         </div>
                     );
-                })}
+                }) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                        Aucune vidéo disponible
+                    </div>
+                )}
             </div>
         </div>
     );
