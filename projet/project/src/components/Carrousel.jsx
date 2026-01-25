@@ -16,15 +16,15 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const videoList = videos || [];
 
     // Dimensions uniformes - toutes les images ont la même largeur
-    const BASE_CARD_WIDTH = 100; // Largeur de base
-    const BASE_GAP = 70; // Gap uniforme entre toutes les images (desktop)
-    const BASE_GAP_MOBILE = 30; // Gap réduit pour mobile
-    const BASE_CARD_HEIGHT = 140; // Hauteur de base réduite pour correspondre à l'espacement
+    const BASE_CARD_WIDTH = 100;
+    const BASE_GAP = 70;
+    const BASE_GAP_MOBILE = 30;
+    const BASE_CARD_HEIGHT = 140;
     const TITLE_FONT_SIZE = 16;
 
     const VISIBLE_ITEMS_DESKTOP = 9;
     const VISIBLE_ITEMS_TABLET = 5;
-    const VISIBLE_ITEMS_TABLET_LARGE = 7; // Zone intermédiaire pour 7 images
+    const VISIBLE_ITEMS_TABLET_LARGE = 7;
     const VISIBLE_ITEMS_MOBILE = 3;
 
     const [dimensions, setDimensions] = useState({
@@ -37,13 +37,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     useEffect(() => {
         const calculateDimensions = () => {
-            // Utiliser window.innerWidth si le container n'est pas encore monté
             const containerWidth = containerRef.current
                 ? containerRef.current.getBoundingClientRect().width || window.innerWidth
                 : window.innerWidth;
 
             if (containerWidth === 0 || !containerWidth) {
-                // Si on a un ref, réessayer plus tard
                 if (containerRef.current) {
                     requestAnimationFrame(calculateDimensions);
                 }
@@ -52,60 +50,50 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
             const mobile = containerWidth <= 820;
             const tablet = containerWidth > 820 && containerWidth < 1024;
-            const tabletLarge = containerWidth >= 900 && containerWidth < 1024; // Zone avec 7 images
+            const tabletLarge = containerWidth >= 900 && containerWidth < 1024;
             setIsMobile(mobile);
             setIsTablet(tablet);
             const visibleItems = mobile ? VISIBLE_ITEMS_MOBILE : (tabletLarge ? VISIBLE_ITEMS_TABLET_LARGE : (tablet ? VISIBLE_ITEMS_TABLET : VISIBLE_ITEMS_DESKTOP));
 
-            // Calculer la largeur uniforme pour toutes les images
             let finalCardWidth;
 
             if (mobile) {
-                // Mobile : images plus grandes avec gap réduit
-                const mobilePadding = 20; // Espace à gauche et à droite (40px au total)
-                const availableWidth = containerWidth - (2 * mobilePadding); // Largeur disponible moins les marges
-                const totalGaps = 2; // 2 gaps pour 3 images
+                const mobilePadding = 20;
+                const availableWidth = containerWidth - (2 * mobilePadding);
+                const totalGaps = 2;
                 const availableWidthForCards = Math.max(0, availableWidth - (totalGaps * BASE_GAP_MOBILE));
-                const baseCardWidth = availableWidthForCards / 3; // Largeur de base pour 3 images
+                const baseCardWidth = availableWidthForCards / 3;
 
-                // Augmenter la taille des images (multiplicateur pour les rendre plus grandes)
-                const sizeMultiplier = 1.15; // +15% pour rendre les images plus grandes
+                const sizeMultiplier = 1.15;
                 const scaledCardWidth = baseCardWidth * sizeMultiplier;
 
-                // Utiliser cette largeur si elle permet toujours 3 images
-                // Sinon, ajuster pour garantir 3 images
                 const maxWidthFor3 = (availableWidth - (totalGaps * BASE_GAP_MOBILE)) / 3;
                 finalCardWidth = Math.min(scaledCardWidth, maxWidthFor3);
 
-                // Limiter la taille maximale pour éviter que les images soient trop grandes près de 820px
-                const MAX_CARD_WIDTH_MOBILE = 120; // Largeur maximale pour les images en mobile (réduite pour voir les titres)
+                const MAX_CARD_WIDTH_MOBILE = 120;
                 finalCardWidth = Math.min(finalCardWidth, MAX_CARD_WIDTH_MOBILE);
 
-                // S'assurer que la largeur est valide et positive
                 if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
+                    finalCardWidth = BASE_CARD_WIDTH;
                 }
             } else {
-                // Desktop/Tablet : calcul normal
-                const totalGaps = visibleItems - 1; // Nombre de gaps entre les images visibles
+                const totalGaps = visibleItems - 1;
                 const availableWidthForCards = Math.max(0, containerWidth - (totalGaps * BASE_GAP));
                 const uniformCardWidth = availableWidthForCards / visibleItems;
 
                 finalCardWidth = uniformCardWidth;
 
-                // Limiter les tailles pour éviter les valeurs aberrantes
                 if (finalCardWidth <= 0 || !isFinite(finalCardWidth)) {
-                    finalCardWidth = BASE_CARD_WIDTH; // Valeur par défaut
+                    finalCardWidth = BASE_CARD_WIDTH;
                 }
             }
 
-            // La hauteur reste proportionnelle à la largeur
             const aspectRatio = BASE_CARD_HEIGHT / BASE_CARD_WIDTH;
             let finalCardHeight = finalCardWidth * aspectRatio;
 
             setDimensions({
                 cardWidth: finalCardWidth,
-                gap: mobile ? BASE_GAP_MOBILE : BASE_GAP, // Gap réduit pour mobile, normal pour desktop
+                gap: mobile ? BASE_GAP_MOBILE : BASE_GAP,
                 cardHeight: finalCardHeight
             });
         };
@@ -122,28 +110,26 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     useEffect(() => {
         if (!videoList.length || dimensions.cardWidth === 0) return;
 
-        // Positions simples : toutes les images avec la même largeur et le même gap
         const gap = dimensions.gap;
         const cardWidth = dimensions.cardWidth;
 
-        // Pour mobile, ajouter une marge à gauche pour centrer les 3 images visibles
         let startX = 0;
         if (isMobile) {
-            const mobilePadding = 20; // Même padding que dans le calcul des dimensions
-            startX = mobilePadding; // Commencer après la marge gauche
+            const mobilePadding = 20;
+            startX = mobilePadding;
         }
 
+        // Initialiser avec les positions de base
         const initialPositions = videoList.map((v, i) => {
             const x = startX + i * (cardWidth + gap);
-            return { ...v, x };
+            return { ...v, x, originalId: v.id };
         });
         setItems(initialPositions);
     }, [videos, dimensions, isMobile]);
 
     useEffect(() => {
-        if (dimensions.cardWidth === 0) return;
+        if (dimensions.cardWidth === 0 || !videoList.length) return;
 
-        // Calculer totalWidth
         const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
 
         const loop = () => {
@@ -158,10 +144,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 const center = rect.width / 2;
 
                 setItems((prev) => {
-                    const currentItem = prev.find((v) => v.id === itemToCenter.id);
+                    const currentItem = prev.find((v) => v.originalId === itemToCenter.originalId);
                     if (!currentItem) return prev;
 
-                    // Toutes les images ont la même largeur maintenant
                     const itemWidth = dimensions.cardWidth;
                     const itemCenter = currentItem.x + itemWidth / 2;
                     let distance = center - itemCenter;
@@ -179,11 +164,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
                     return prev.map((item) => {
                         let newX = item.x + speed;
-                        // Boucle infinie avec gestion cohérente
-                        while (newX < -(dimensions.cardWidth + dimensions.gap)) {
+                        
+                        // Wrapping infini
+                        if (newX < -(dimensions.cardWidth + dimensions.gap)) {
                             newX += totalWidth;
                         }
-                        while (newX > totalWidth) {
+                        if (newX > totalWidth - dimensions.cardWidth) {
                             newX -= totalWidth;
                         }
                         return { ...item, x: newX };
@@ -206,11 +192,12 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     setItems((prev) =>
                         prev.map((item) => {
                             let newX = item.x - speedRef.current;
-                            // Boucle infinie avec marge de sécurité pour éviter les chevauchements
-                            while (newX < -(dimensions.cardWidth + dimensions.gap)) {
+                            
+                            // Wrapping infini
+                            if (newX < -(dimensions.cardWidth + dimensions.gap)) {
                                 newX += totalWidth;
                             }
-                            while (newX > totalWidth) {
+                            if (newX > totalWidth - dimensions.cardWidth) {
                                 newX -= totalWidth;
                             }
                             return { ...item, x: newX };
@@ -227,15 +214,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             cancelAnimationFrame(animationRef.current);
             if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
         };
-    }, [videos, items.length, dimensions, isMobile, isTablet]);
+    }, [videos, items.length, dimensions, isMobile, isTablet, videoList.length]);
 
     const handleMouseMove = (e) => {
-        // Libérer le verrouillage dès qu'on bouge la souris (sauf pendant l'auto-centrage)
         if (!isAutoCentering.current && targetItemRef.current) {
             targetItemRef.current = null;
         }
 
-        if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
+        if (isAutoCentering.current) return;
 
         const rect = containerRef.current.getBoundingClientRect();
         const center = rect.width / 2;
@@ -253,7 +239,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleMouseLeave = () => {
-        // Réinitialiser la vitesse quand la souris sort
         targetSpeed.current = 0;
     };
 
@@ -283,10 +268,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const dt = Math.max(now - lastTouchTimeRef.current, 1);
         const delta = e.touches[0].clientX - lastTouchX.current;
 
-        // Défilement direct 1:1 avec le doigt - ultra fluide
         targetSpeed.current = -delta;
         
-        // Calcul de la vélocité pour l'inertie uniquement
         const instantVelocity = -delta * (1000 / dt);
         touchVelocityRef.current = instantVelocity * 0.2 + touchVelocityRef.current * 0.8;
 
@@ -311,14 +294,15 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const handleClick = (item) => {
         if (!containerRef.current || items.length === 0) return;
 
-        // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
 
-        // Libérer la cible précédente si on clique sur une nouvelle image
         targetItemRef.current = item;
         isAutoCentering.current = true;
 
-        onSelectVideo(item);
+        const originalItem = videoList.find(v => v.id === item.originalId);
+        if (originalItem) {
+            onSelectVideo(originalItem);
+        }
     };
 
     const lastCenterUpdate = useRef(0);
@@ -343,7 +327,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         setCenterVideo(closest);
     }, [items, dimensions]);
 
-    // Ne pas rendre si pas de vidéos ou dimensions invalides
     if (!videoList.length) {
         return (
             <div className="w-full relative md:mb-0 md:mt-0" style={{ overflow: 'visible', minHeight: '200px' }}>
@@ -363,6 +346,29 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             </div>
         );
     }
+
+    // Rendu avec clonage dynamique côté render
+    const containerWidth = containerRef.current?.getBoundingClientRect().width || 0;
+    const totalWidth = (dimensions.cardWidth + dimensions.gap) * videoList.length;
+    
+    // Générer les clones nécessaires pour remplir le viewport + marges
+    const renderMargin = dimensions.cardWidth * 5; // Large marge
+    const itemsToRender = [];
+    
+    items.forEach((item) => {
+        // Clone à gauche
+        if (item.x + dimensions.cardWidth > -renderMargin && item.x < 0) {
+            itemsToRender.push({ ...item, x: item.x + totalWidth, cloneKey: 'left' });
+        }
+        // Original
+        if (item.x + dimensions.cardWidth > -renderMargin && item.x < containerWidth + renderMargin) {
+            itemsToRender.push({ ...item, cloneKey: 'original' });
+        }
+        // Clone à droite
+        if (item.x < containerWidth + renderMargin && item.x + dimensions.cardWidth > containerWidth) {
+            itemsToRender.push({ ...item, x: item.x - totalWidth, cloneKey: 'right' });
+        }
+    });
 
     return (
         <div
@@ -391,23 +397,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
             >
-                {items.length > 0 ? items.map((item, i) => {
-                    // Toutes les images ont la même largeur et hauteur
+                {itemsToRender.map((item, i) => {
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
-                    
-                    // En mobile, masquer les éléments hors viewport pour éviter les chevauchements de titres
-                    const containerWidth = containerRef.current?.getBoundingClientRect().width || 0;
-                    const isVisible = isMobile 
-                        ? (itemX > -itemWidth - 50 && itemX < containerWidth + 50)
-                        : true;
-
-                    if (!isVisible && isMobile) return null;
 
                     return (
                         <div
-                            key={item.id}
+                            key={`${item.originalId}-${item.cloneKey}-${i}`}
                             className="absolute"
                             style={{
                                 left: 0,
@@ -423,6 +420,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 alt={item.title || item.alt}
                                 onClick={() => handleClick(item)}
                                 className="w-full cursor-pointer"
+                                loading="eager"
+                                decoding="async"
                                 style={{
                                     height: `${itemHeight}px`,
                                     objectFit: "cover",
@@ -434,8 +433,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
                                     fontSize: isMobile ? "12px" : `${TITLE_FONT_SIZE}px`,
-                                    borderBottom: selectedVideo && selectedVideo.id === item.id ? '0.5px solid currentColor' : 'none',
-                                    paddingBottom: selectedVideo && selectedVideo.id === item.id ? '1px' : '0',
+                                    borderBottom: selectedVideo && selectedVideo.id === item.originalId ? '0.5px solid currentColor' : 'none',
+                                    paddingBottom: selectedVideo && selectedVideo.id === item.originalId ? '1px' : '0',
                                     display: 'block',
                                     textAlign: 'center',
                                     width: '100%',
@@ -448,11 +447,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                             </div>
                         </div>
                     );
-                }) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                        Aucune vidéo disponible
-                    </div>
-                )}
+                })}
             </div>
         </div>
     );
