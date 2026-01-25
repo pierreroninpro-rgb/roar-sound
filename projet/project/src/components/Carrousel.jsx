@@ -179,13 +179,13 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
             if (!isAutoCentering.current && !targetItemRef.current) {
                 if (isInertiaScroll.current) {
-                    targetSpeed.current *= 0.95;
-                    if (Math.abs(targetSpeed.current) < 0.3) {
+                    targetSpeed.current *= 0.88; // Décélération plus rapide
+                    if (Math.abs(targetSpeed.current) < 0.8) { // Seuil d'arrêt plus élevé
                         targetSpeed.current = 0;
                         isInertiaScroll.current = false;
                     }
                 }
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.15;
+                speedRef.current += (targetSpeed.current - speedRef.current) * 0.2; // Réactivité augmentée
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
 
                 if (speedRef.current !== 0) {
@@ -280,9 +280,9 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     };
 
     const handleTouchEnd = () => {
-        const momentum = touchVelocityRef.current * 0.1;
+        const momentum = touchVelocityRef.current * 0.05; // Réduit de 0.1 à 0.05
         const sign = Math.sign(momentum);
-        const capped = Math.min(Math.abs(momentum), 20) * sign;
+        const capped = Math.min(Math.abs(momentum), 12) * sign; // Réduit de 20 à 12
         targetSpeed.current = capped;
         speedRef.current = capped;
         isInertiaScroll.current = true;
