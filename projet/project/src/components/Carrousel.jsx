@@ -265,7 +265,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         const delta = e.touches[0].clientX - lastTouchX.current;
         // Vitesse réduite pour mobile (0.8x pour moins de sensibilité)
-        targetSpeed.current = -delta * 1.2;
+        targetSpeed.current = -delta * 1.4;
         lastTouchX.current = e.touches[0].clientX;
     };
 
