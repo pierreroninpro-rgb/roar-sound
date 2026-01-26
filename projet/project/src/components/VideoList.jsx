@@ -434,14 +434,42 @@ export default function VideoList({ onFullscreenChange }) {
   const handlePlayPause = async () => {
     if (!playerRef.current) return;
 
+    // Afficher les contrôles
+    setShowControls(true);
+    setIsHovering(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+
     try {
       if (isPlaying) {
         await playerRef.current.pause();
+        setIsPlaying(false);
+        setShowControls(true);
       } else {
+        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
+        const isMobileDevice = window.innerWidth <= 820;
+        if (isMobileDevice) {
+          await activateSoundOnMobile();
+        }
+        
         await playerRef.current.play();
+        setIsPlaying(true);
+        
+        // Si pas mobile, activer le son après
+        if (!isMobileDevice) {
+          await activateSoundOnMobile();
+        }
+
+        controlsTimeoutRef.current = setTimeout(() => {
+          if (!isHovering) {
+            setShowControls(false);
+          }
+        }, 3000);
       }
     } catch (err) {
       console.error("Error controlling video:", err);
+      setIsPlaying(false);
     }
   };
 
@@ -881,7 +909,7 @@ export default function VideoList({ onFullscreenChange }) {
       try {
         const d = await playerRef.current.getDuration();
         if (d > 0) durationRef.current = d;
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
@@ -933,7 +961,7 @@ export default function VideoList({ onFullscreenChange }) {
     if (didMove && dur > 0 && playerRef.current && finalPct >= 0 && finalPct <= 100) {
       try {
         await playerRef.current.setCurrentTime((finalPct / 100) * dur);
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
@@ -1171,10 +1199,25 @@ export default function VideoList({ onFullscreenChange }) {
                     />
                     {/* Overlay transparent pour capturer les clics sur la vidéo */}
                     <div
-                      onClick={(e) => {
+                      onClick={async (e) => {
+                        // Ne pas capturer les clics sur les éléments interactifs
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
+                          return;
+                        }
                         // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
                         if (e.target === e.currentTarget) {
-                          handleVideoClick();
+                          e.preventDefault();
+                          await handlePlayPause();
+                        }
+                      }}
+                      onTouchStart={async (e) => {
+                        // Ne pas capturer les touches sur les éléments interactifs
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
+                          return;
+                        }
+                        if (e.target === e.currentTarget) {
+                          e.preventDefault();
+                          await handlePlayPause();
                         }
                       }}
                       style={{
@@ -1193,6 +1236,7 @@ export default function VideoList({ onFullscreenChange }) {
                     {/* Navbar en bas - Mode normal */}
                     {!isFullscreen && (
                       <div
+                        data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: '0.1rem 1rem',
@@ -1205,12 +1249,13 @@ export default function VideoList({ onFullscreenChange }) {
                           left: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
                           right: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
                           transition: 'opacity 0.3s ease-in-out',
-                          zIndex: 15,
+                          zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
                           fontFamily: "'Helvetica', 'Arial', sans-serif",
                           boxSizing: 'border-box'
                         }}
                         onClick={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                         onTouchStart={(e) => {
@@ -1223,8 +1268,13 @@ export default function VideoList({ onFullscreenChange }) {
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
-                            // Utiliser handleVideoClick pour une gestion cohérente
-                            await handleVideoClick();
+                            e.preventDefault();
+                            await handlePlayPause();
+                          }}
+                          onTouchStart={async (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            await handlePlayPause();
                           }}
                           style={{
                             cursor: 'pointer',
@@ -1482,8 +1532,13 @@ export default function VideoList({ onFullscreenChange }) {
             <div
               onClick={async (e) => {
                 e.stopPropagation();
-                // Utiliser handleVideoClick pour une gestion cohérente
-                await handleVideoClick();
+                e.preventDefault();
+                await handlePlayPause();
+              }}
+              onTouchStart={async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                await handlePlayPause();
               }}
               style={{
                 cursor: 'pointer',
