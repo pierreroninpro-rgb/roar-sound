@@ -173,13 +173,13 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     if (distance > totalWidth / 2) distance -= totalWidth;
                     if (distance < -totalWidth / 2) distance += totalWidth;
 
-                    if (Math.abs(distance) < 0.5) {
+                    if (Math.abs(distance) < 1) { // Augmenté de 0.5 à 1 pour un arrêt plus doux
                         isAutoCentering.current = false;
                         targetSpeed.current = 0;
                         return prev;
                     }
 
-                    const speed = distance * 0.1;
+                    const speed = distance * 0.04; // Réduit de 0.06 à 0.04 pour ralentir encore plus le centrage
 
                     return prev.map((item) => {
                         let newX = item.x + speed;
@@ -191,7 +191,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             }
 
             if (!isAutoCentering.current && !targetItemRef.current) {
-                speedRef.current += (targetSpeed.current - speedRef.current) * 0.08;
+                speedRef.current += (targetSpeed.current - speedRef.current) * 0.05; // Réduit de 0.08 à 0.05 pour ralentir l'interpolation
 
                 if (Math.abs(speedRef.current) < 0.01) speedRef.current = 0;
 
@@ -228,7 +228,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         const rect = containerRef.current.getBoundingClientRect();
         const center = rect.width / 2;
         const distance = e.clientX - rect.left - center;
-        const maxSpeed = 20;
+        const maxSpeed = 12; // Réduit de 20 à 12 pour ralentir le mouvement
         const deadZone = 50;
 
         if (Math.abs(distance) > deadZone) {
@@ -264,8 +264,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
         const delta = e.touches[0].clientX - lastTouchX.current;
-        // Vitesse augmentée pour mobile (2.5x au lieu de 1.2x)
-        targetSpeed.current = -delta * 2.5;
+        // Vitesse réduite pour mobile (0.8x pour moins de sensibilité)
+        targetSpeed.current = -delta * 0.8;
         lastTouchX.current = e.touches[0].clientX;
     };
 
