@@ -1244,27 +1244,6 @@ export default function VideoList({ onFullscreenChange }) {
                                 transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
                               }}
                             />
-                            <div
-                              role="slider"
-                              tabIndex={0}
-                              aria-label="Position dans la vidéo"
-                              aria-valuenow={Math.round(progress)}
-                              aria-valuemin={0}
-                              aria-valuemax={100}
-                              onMouseDown={handleProgressDragStart}
-                              onTouchStart={handleProgressDragStart}
-                              className="absolute top-1/2 bg-white rounded-full touch-none select-none"
-                              style={{
-                                left: `calc(${progress}% - ${(spacing.isMobile ? 28 : 20) / 2}px)`,
-                                transform: 'translateY(-50%)',
-                                width: spacing.isMobile ? 28 : 20,
-                                height: spacing.isMobile ? 28 : 20,
-                                cursor: isDraggingProgressState ? 'grabbing' : 'grab',
-                                zIndex: 10,
-                                transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
-                                touchAction: 'none'
-                              }}
-                            />
                           </div>
                         </div>
 
@@ -1413,6 +1392,11 @@ export default function VideoList({ onFullscreenChange }) {
               e.stopPropagation();
               handleFullscreen();
             }}
+            onMouseMove={() => {
+              // Afficher les contrôles au mouvement de la souris
+              setShowControls(true);
+              setIsHovering(true);
+            }}
             style={{
               position: 'fixed',
               top: '1rem',
@@ -1422,14 +1406,16 @@ export default function VideoList({ onFullscreenChange }) {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: '0.25rem'
+              padding: '0.25rem',
+              opacity: 1,
+              display: 'block'
             }}
           >
             <img
               src="/images/close.png"
               alt="Fermer plein écran"
               className="w-[20px] h-[20px] md:w-[25px] md:h-[25px]"
-              style={{ display: 'block' }}
+              style={{ display: 'block', opacity: 1 }}
             />
           </button>
 
@@ -1457,6 +1443,11 @@ export default function VideoList({ onFullscreenChange }) {
             onClick={(e) => e.stopPropagation()}
             onMouseEnter={handleNavbarMouseEnter}
             onMouseLeave={handleNavbarMouseLeave}
+            onMouseMove={() => {
+              // S'assurer que les contrôles sont visibles au mouvement de la souris
+              setShowControls(true);
+              setIsHovering(true);
+            }}
           >
             {/* Icône PAUSE/PLAY */}
             <div
@@ -1533,27 +1524,6 @@ export default function VideoList({ onFullscreenChange }) {
                   style={{
                     width: `${progress}%`,
                     transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
-                  }}
-                />
-                <div
-                  role="slider"
-                  tabIndex={0}
-                  aria-label="Position dans la vidéo"
-                  aria-valuenow={Math.round(progress)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  onMouseDown={handleProgressDragStart}
-                  onTouchStart={handleProgressDragStart}
-                  className="absolute top-1/2 bg-white rounded-full touch-none select-none"
-                  style={{
-                    left: `calc(${progress}% - ${(spacing.isMobile ? 28 : 20) / 2}px)`,
-                    transform: 'translateY(-50%)',
-                    width: spacing.isMobile ? 28 : 20,
-                    height: spacing.isMobile ? 28 : 20,
-                    cursor: isDraggingProgressState ? 'grabbing' : 'grab',
-                    zIndex: 10,
-                    transition: isDraggingProgressState ? 'none' : 'left 0.1s ease-out',
-                    touchAction: 'none'
                   }}
                 />
               </div>

@@ -40,7 +40,7 @@ const Enter = () => {
   };
 
   const handleSoundClick = () => {
-    toggleMute();          // si tu veux quand même gérer le son
+    toggleMute();          
     setShowSoundIcon(false); // cache l’image après le clic
   };
   
