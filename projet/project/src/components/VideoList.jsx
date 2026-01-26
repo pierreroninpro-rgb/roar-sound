@@ -1223,32 +1223,8 @@ export default function VideoList({ onFullscreenChange }) {
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (isPlaying) {
-                              // Si en lecture, mettre en pause
-                              await handleVideoClick();
-                            } else {
-                              // Si en pause, masquer immédiatement le bouton play.png au centre et lancer la vidéo
-                              setIsPlaying(true);
-                              if (playerRef.current) {
-                                try {
-                                  setShowControls(true);
-                                  setIsHovering(true);
-                                  if (controlsTimeoutRef.current) {
-                                    clearTimeout(controlsTimeoutRef.current);
-                                  }
-                                  await playerRef.current.play();
-                                  // Activer le son en mobile après l'interaction utilisateur
-                                  await activateSoundOnMobile();
-                                  controlsTimeoutRef.current = setTimeout(() => {
-                                    setIsHovering(false);
-                                    setShowControls(false);
-                                  }, 3000);
-                                } catch (err) {
-                                  console.error("Error playing video:", err);
-                                  setIsPlaying(false);
-                                }
-                              }
-                            }
+                            // Utiliser handleVideoClick pour une gestion cohérente
+                            await handleVideoClick();
                           }}
                           style={{
                             cursor: 'pointer',
@@ -1506,32 +1482,8 @@ export default function VideoList({ onFullscreenChange }) {
             <div
               onClick={async (e) => {
                 e.stopPropagation();
-                if (isPlaying) {
-                  // Si en lecture, mettre en pause
-                  await handleVideoClick();
-                } else {
-                  // Si en pause, masquer immédiatement le bouton play.png au centre et lancer la vidéo
-                  setIsPlaying(true);
-                  if (playerRef.current) {
-                    try {
-                      setShowControls(true);
-                      setIsHovering(true);
-                      if (controlsTimeoutRef.current) {
-                        clearTimeout(controlsTimeoutRef.current);
-                      }
-                      await playerRef.current.play();
-                      // Activer le son en mobile après l'interaction utilisateur
-                      await activateSoundOnMobile();
-                      controlsTimeoutRef.current = setTimeout(() => {
-                        setIsHovering(false);
-                        setShowControls(false);
-                      }, 3000);
-                    } catch (err) {
-                      console.error("Error playing video:", err);
-                      setIsPlaying(false);
-                    }
-                  }
-                }
+                // Utiliser handleVideoClick pour une gestion cohérente
+                await handleVideoClick();
               }}
               style={{
                 cursor: 'pointer',
