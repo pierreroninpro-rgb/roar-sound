@@ -88,12 +88,12 @@ const Home = () => {
 
     return (
         <div 
-            className="relative w-screen h-[100dvh] scrollbar-hide cursor-pointer" 
+            className="relative w-screen h-[100dvh] scrollbar-hide no-scrollbar cursor-pointer" 
             onClick={handlePageClick}
-            className="scrollbar-hide"
             style={{
-                overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
+                overflow: 'hidden', // Désactiver complètement le scroll
                 overflowX: 'hidden',
+                overflowY: 'hidden',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
             }}

@@ -110,6 +110,13 @@ body {
   height: 100%;
   overflow: hidden;
   /* Pas de scroll horizontal ni vertical */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 #root {
@@ -117,4 +124,10 @@ body {
   height: 100vh;
   overflow: hidden;
   /* Pas de scroll */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#root::-webkit-scrollbar {
+  display: none;
 }

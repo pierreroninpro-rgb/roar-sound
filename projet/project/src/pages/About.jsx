@@ -51,10 +51,11 @@ const About = () => {
     }, [isMobile, isLandscape]);
 
     return (
-        <div className="w-full h-full scrollbar-hide" style={{
+        <div className="w-full h-full scrollbar-hide no-scrollbar" style={{
             backgroundColor: '#F6F6F6',
-            overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
+            overflow: 'hidden', // Désactiver complètement le scroll
             overflowX: 'hidden',
+            overflowY: 'hidden',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
         }}>

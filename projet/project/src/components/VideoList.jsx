@@ -1007,11 +1007,14 @@ export default function VideoList({ onFullscreenChange }) {
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-full"
+      className="w-full max-w-full scrollbar-hide no-scrollbar"
       style={{
         boxSizing: 'border-box',
-        overflow: (isMobile && !isFullscreen) ? 'hidden' : (isMobile && isFullscreen) ? 'auto' : 'auto', // Cacher le scroll en mobile sauf en plein écran vidéo
+        overflow: (isMobile && !isFullscreen) ? 'hidden' : (isMobile && isFullscreen) ? 'auto' : 'hidden', // Désactiver le scroll sauf en plein écran mobile
         overflowX: 'hidden',
+        overflowY: (isMobile && isFullscreen) ? 'auto' : 'hidden', // Permettre le scroll vertical uniquement en plein écran mobile
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
         paddingBottom: isFullscreen ? '0' : `${spacing.bottomMargin}px`, // Marge en bas fixe (18px mobile, 28px desktop)
         paddingLeft: isFullscreen ? '0' : undefined,
         paddingRight: isFullscreen ? '0' : undefined,

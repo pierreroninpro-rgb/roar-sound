@@ -66,10 +66,11 @@ const Projects = () => {
     return (
         <>
             {isLoading && <Preloader onComplete={() => setIsLoading(false)} duration={500} />}
-            <div className="w-full h-screen scrollbar-hide md:mb-[32px]" style={{ 
+            <div className="w-full h-screen scrollbar-hide no-scrollbar md:mb-[32px]" style={{ 
                 backgroundColor: '#F6F6F6',
-                overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
+                overflow: 'hidden', // Désactiver complètement le scroll
                 overflowX: 'hidden',
+                overflowY: 'hidden',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
             }}>
