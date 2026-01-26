@@ -227,17 +227,26 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         const rect = containerRef.current.getBoundingClientRect();
         const center = rect.width / 2;
-        const distance = e.clientX - rect.left - center;
-        const maxSpeed = 20;
+        const rawDistance = e.clientX - rect.left - center;
+        const maxSpeed = 16;
         const deadZone = 50;
 
-        if (Math.abs(distance) > deadZone) {
+        if (Math.abs(rawDistance) > deadZone) {
             // Limiter la largeur utilisée pour le calcul à 1400px maximum
             // Pour les écrans plus grands, utiliser la moitié de 1400px (700px) comme référence
-            const maxWidth = 1400;
-            const maxCenter = Math.min(center, maxWidth / 2);
-            const normalized = (Math.abs(distance) - deadZone) / (maxCenter - deadZone);
-            const direction = Math.sign(distance);
+            const maxWidth = 1600;
+            const maxCenter = maxWidth / 2; // Toujours 700px pour 1400px
+            const maxDistanceFromCenter = maxCenter - deadZone; // Distance maximale utilisable depuis le centre (650px)
+            
+            // Limiter la distance des deux côtés (gauche et droite) par rapport au centre
+            // Pour garder la même vitesse maximale au-delà de 1400px
+            const absDistance = Math.abs(rawDistance);
+            const limitedAbsDistance = Math.min(absDistance, maxDistanceFromCenter + deadZone);
+            const limitedDistance = Math.sign(rawDistance) * limitedAbsDistance;
+            
+            // Normaliser en utilisant la distance maximale depuis le centre
+            const normalized = (limitedAbsDistance - deadZone) / maxDistanceFromCenter;
+            const direction = Math.sign(limitedDistance);
             targetSpeed.current = direction * maxSpeed * normalized ** 2;
         } else {
             targetSpeed.current = 0;
