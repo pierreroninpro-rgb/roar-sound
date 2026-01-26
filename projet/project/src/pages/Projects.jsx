@@ -69,7 +69,9 @@ const Projects = () => {
             <div className="w-full h-screen scrollbar-hide md:mb-[32px]" style={{ 
                 backgroundColor: '#F6F6F6',
                 overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
-                overflowX: 'hidden'
+                overflowX: 'hidden',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
             }}>
                 {!isFullscreen && (
                     <div className="relative z-[100] text-grey-dark font-HelveticaNeue font-[400]" style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}>

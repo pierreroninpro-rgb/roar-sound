@@ -54,7 +54,9 @@ const About = () => {
         <div className="w-full h-full scrollbar-hide" style={{
             backgroundColor: '#F6F6F6',
             overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
-            overflowX: 'hidden'
+            overflowX: 'hidden',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
         }}>
             <div className='text-grey-dark'><Navbar /></div>
 

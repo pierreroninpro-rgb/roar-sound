@@ -90,9 +90,12 @@ const Home = () => {
         <div 
             className="relative w-screen h-[100dvh] scrollbar-hide cursor-pointer" 
             onClick={handlePageClick}
+            className="scrollbar-hide"
             style={{
                 overflow: (isMobile && isLandscape) ? 'hidden' : (isMobile && !isLandscape) ? 'hidden' : 'auto', // Cacher le scroll en mobile (portrait et paysage)
-                overflowX: 'hidden'
+                overflowX: 'hidden',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
             }}
         >
             {/* Navbar avec marge top responsive */}

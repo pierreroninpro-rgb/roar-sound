@@ -284,6 +284,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const handleClick = (item) => {
         if (!containerRef.current || items.length === 0) return;
 
+        // Ne pas permettre de cliquer sur l'image déjà sélectionnée
+        if (selectedVideo && selectedVideo.id === item.id) {
+            return;
+        }
+
         // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
 
@@ -336,9 +341,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     return (
         <div
-            className="w-full relative md:mb-0 md:mt-0"
+            className="w-full relative md:mb-0 md:mt-0 scrollbar-hide"
             style={{
-                overflow: isMobile ? 'hidden' : 'visible',
+                overflow: isMobile ? 'hidden' : 'hidden',
+                overflowX: 'hidden',
+                overflowY: 'hidden',
                 minHeight: '200px',
                 paddingLeft: isMobile ? '20px' : '0',
                 paddingRight: isMobile ? '20px' : '0',
@@ -347,12 +354,14 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         >
             <div
                 ref={containerRef}
-                className="relative bg-transparent cursor-pointer"
+                className="relative bg-transparent cursor-pointer scrollbar-hide"
                 style={{
                     height: `${dimensions.cardHeight + 8 + 50}px`,
                     minHeight: '200px',
                     width: '100%',
-                    overflow: isMobile ? 'hidden' : 'visible'
+                    overflow: 'hidden',
+                    overflowX: 'hidden',
+                    overflowY: 'hidden'
                 }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -365,6 +374,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
+                    const isSelected = selectedVideo && selectedVideo.id === item.id;
 
                     return (
                         <div
@@ -382,10 +392,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 src={item.thumbnail || item.url || '/images/default.png'}
                                 alt={item.title || item.alt}
                                 onClick={() => handleClick(item)}
-                                className="w-full cursor-pointer"
+                                className={`w-full ${isSelected ? 'cursor-default' : 'cursor-pointer'}`}
                                 style={{
                                     height: `${itemHeight}px`,
                                     objectFit: "cover",
+                                    pointerEvents: isSelected ? 'none' : 'auto',
                                 }}
                                 onError={(e) => {
                                     e.target.src = '/images/default.png';
