@@ -1158,7 +1158,9 @@ export default function VideoList({ onFullscreenChange }) {
                         top: isFullscreen ? '0' : '0',
                         left: isFullscreen ? '0' : '0',
                         right: isFullscreen ? '0' : undefined,
-                        bottom: isFullscreen ? '0' : undefined
+                        bottom: isFullscreen ? '0' : undefined,
+                        pointerEvents: 'auto', // Permettre les interactions avec l'iframe
+                        cursor: 'pointer' // Curseur main pour indiquer qu'on peut cliquer
                       }}
                       frameBorder="0"
                       allow="autoplay; picture-in-picture; fullscreen"
@@ -1166,6 +1168,26 @@ export default function VideoList({ onFullscreenChange }) {
                       webkitAllowFullScreen
                       mozallowfullscreen
                       title={selectedVideo.title}
+                    />
+                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
+                    <div
+                      onClick={(e) => {
+                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
+                        if (e.target === e.currentTarget) {
+                          handleVideoClick();
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 10, // Au-dessus de l'iframe mais en-dessous de la navbar (z-index 15)
+                        pointerEvents: 'auto',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent'
+                      }}
                     />
 
                     {/* Navbar en bas - Mode normal */}
