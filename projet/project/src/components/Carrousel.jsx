@@ -264,7 +264,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const touchStartY = useRef(null);
     const touchedItemRef = useRef(null); // Élément touché au début
     const isSwipingRef = useRef(false); // Indique si c'est un swipe
-    const SWIPE_THRESHOLD = 4; // Seuil en pixels pour distinguer tap vs swipe
+    const SWIPE_THRESHOLD = 1; // Seuil en pixels pour distinguer tap vs swipe
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
