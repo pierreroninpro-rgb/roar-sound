@@ -704,6 +704,37 @@ export default function VideoList({ onFullscreenChange }) {
     };
   }, [isFullscreen, isPlaying, isHovering]);
 
+  // Gérer les raccourcis clavier (Espace pour play/pause, Échap pour quitter plein écran)
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Ignorer si l'utilisateur est en train de taper dans un input, textarea, etc.
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+
+      // Touche Échap : quitter le plein écran
+      if (e.code === 'Escape' || e.key === 'Escape') {
+        if (isFullscreen) {
+          e.preventDefault();
+          handleFullscreen();
+        }
+        return;
+      }
+
+      // Touche Espace : play/pause (uniquement si une vidéo est sélectionnée)
+      if (selectedVideo && (e.code === 'Space' || e.key === ' ')) {
+        e.preventDefault(); // Empêcher le scroll de la page
+        handleVideoClick();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [selectedVideo, isPlaying, isFullscreen]); // Dépendances pour que les fonctions soient à jour
+
   // Gérer le hover sur la vidéo
   const handleVideoMouseEnter = () => {
     setIsHovering(true);
