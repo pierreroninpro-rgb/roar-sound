@@ -109,6 +109,22 @@ const Home = () => {
 
             {/* Vidéo Vimeo */}
             <VideoPlayer onVideoLoad={handleVideoLoad} videoRef={videoRef} />
+            
+            {/* Overlay transparent pour capturer les clics sur la vidéo */}
+            <div
+                onClick={handlePageClick}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 1, // Au-dessus de la vidéo mais en-dessous de la navbar (z-index 300) et des boutons
+                    pointerEvents: 'auto',
+                    cursor: 'pointer',
+                    backgroundColor: 'transparent'
+                }}
+            />
 
             {/* Loader original */}
             {loading && (
