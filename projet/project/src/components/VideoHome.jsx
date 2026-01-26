@@ -101,7 +101,7 @@ const Enter = () => {
           ref={videoRef}
           loading="lazy"
           onLoad={handleVideoLoad}
-          src="https://player.vimeo.com/video/1128797324?autoplay=1&loop=1&muted=1&background=1&quality=360p"
+          src="https://player.vimeo.com/video/1128797324?autoplay=1&loop=1&muted=1&background=1&quality=1080p"
           className="absolute w-[450%] h-[130%] -translate-x-3/4 scale-125 top-0 left-0 md:w-[120%] md:h-[120%] md:-translate-x-1/2 md:-translate-y-1/2 md:scale-125"
           style={{ transform: "translate(-10%, -10%) scale(1.2)", opacity: 0 }}
           frameBorder="0"
