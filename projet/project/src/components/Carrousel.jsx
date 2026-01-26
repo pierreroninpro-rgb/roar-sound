@@ -293,6 +293,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
     const handleClick = (item) => {
         if (!containerRef.current || items.length === 0) return;
 
+        // Ne pas permettre de cliquer sur l'image déjà sélectionnée
+        if (selectedVideo && selectedVideo.id === item.id) {
+            return;
+        }
+
         // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
 
@@ -374,6 +379,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
+                    const isSelected = selectedVideo && selectedVideo.id === item.id;
 
                     return (
                         <div
@@ -391,10 +397,20 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 src={item.thumbnail || item.url || '/images/default.png'}
                                 alt={item.title || item.alt}
                                 onClick={() => handleClick(item)}
-                                className="w-full cursor-pointer"
+                                onTouchStart={(e) => {
+                                    // Empêcher le touch sur l'image sélectionnée
+                                    if (isSelected) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        return;
+                                    }
+                                    handleClick(item);
+                                }}
+                                className={`w-full ${isSelected ? 'cursor-default' : 'cursor-pointer'}`}
                                 style={{
                                     height: `${itemHeight}px`,
                                     objectFit: "cover",
+                                    pointerEvents: isSelected ? 'none' : 'auto',
                                 }}
                                 onError={(e) => {
                                     e.target.src = '/images/default.png';
