@@ -298,6 +298,13 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
             return;
         }
 
+        // Ne pas permettre de cliquer si le carrousel est en mouvement rapide
+        // (pour éviter les clics accidentels pendant le scroll)
+        const speedThreshold = 2; // Seuil de vitesse au-delà duquel on désactive les clics
+        if (Math.abs(speedRef.current) > speedThreshold || Math.abs(targetSpeed.current) > speedThreshold) {
+            return;
+        }
+
         // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
 
