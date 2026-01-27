@@ -279,7 +279,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         // acceleration ou diminution du carrousel version mobile
         const delta = e.touches[0].clientX - lastTouchX.current;
         // Vitesse réduite pour mobile (0.8x pour moins de sensibilité)
-        targetSpeed.current = -delta * 1.8;
+        targetSpeed.current = -delta * 1.4;
         lastTouchX.current = e.touches[0].clientX;
     };
 
@@ -292,11 +292,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const handleClick = (item) => {
         if (!containerRef.current || items.length === 0) return;
-
-        // Ne pas permettre de cliquer sur l'image déjà sélectionnée
-        if (selectedVideo && selectedVideo.id === item.id) {
-            return;
-        }
 
         // Annuler toute action en cours
         if (centerPauseTimeout.current) clearTimeout(centerPauseTimeout.current);
@@ -379,7 +374,6 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                     const itemWidth = dimensions.cardWidth;
                     const itemHeight = dimensions.cardHeight;
                     const itemX = item.x;
-                    const isSelected = selectedVideo && selectedVideo.id === item.id;
 
                     return (
                         <div
@@ -397,27 +391,17 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 src={item.thumbnail || item.url || '/images/default.png'}
                                 alt={item.title || item.alt}
                                 onClick={() => handleClick(item)}
-                                onTouchStart={(e) => {
-                                    // Empêcher le touch sur l'image sélectionnée
-                                    if (isSelected) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        return;
-                                    }
-                                    handleClick(item);
-                                }}
-                                className={`w-full ${isSelected ? 'cursor-default' : 'cursor-pointer'}`}
+                                className="w-full cursor-pointer"
                                 style={{
                                     height: `${itemHeight}px`,
                                     objectFit: "cover",
-                                    pointerEvents: isSelected ? 'none' : 'auto',
                                 }}
                                 onError={(e) => {
                                     e.target.src = '/images/default.png';
                                 }}
                             />
                             <div
-                                className="text-center font-HelveticaNeue font-light text-grey-darker"
+                                className="text-center font-HelveticaNeue font-light pt-2 text-grey-darker"
                                 style={{
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
