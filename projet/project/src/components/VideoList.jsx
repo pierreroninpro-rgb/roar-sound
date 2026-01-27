@@ -938,9 +938,12 @@ export default function VideoList({ onFullscreenChange }) {
     lastSetCurrentTimeRef.current = now;
 
     const newTime = (percentage / 100) * duration;
-    playerRef.current.setCurrentTime(Math.max(0, Math.min(duration, newTime))).catch((err) => {
-      console.error("Error setting time:", err);
-    });
+    const setTimePromise = playerRef.current.setCurrentTime(Math.max(0, Math.min(duration, newTime)));
+    if (setTimePromise && typeof setTimePromise.catch === 'function') {
+      setTimePromise.catch((err) => {
+        console.error("Error setting time:", err);
+      });
+    }
   };
 
   const handleProgressDragEnd = async () => {
@@ -1255,14 +1258,14 @@ export default function VideoList({ onFullscreenChange }) {
                           boxSizing: 'border-box'
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onMouseEnter={handleNavbarMouseEnter}
-                        onMouseLeave={handleNavbarMouseLeave}
                         onTouchStart={(e) => {
+                          e.stopPropagation();
                           // Sur mobile, afficher toujours la navbar au touch
                           setShowControls(true);
                           setIsHovering(true);
                         }}
+                        onMouseEnter={handleNavbarMouseEnter}
+                        onMouseLeave={handleNavbarMouseLeave}
                       >
                         {/* Icône PAUSE/PLAY */}
                         <div

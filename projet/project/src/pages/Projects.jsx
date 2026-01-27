@@ -55,9 +55,12 @@ const Projects = () => {
                 
                 // Déverrouiller l'orientation à la destruction du composant (sauf si on est en plein écran)
                 if (!isFullscreen && screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock().catch(() => {
-                        // Ignorer les erreurs lors du déverrouillage
-                    });
+                    const unlockPromise = screen.orientation.unlock();
+                    if (unlockPromise && typeof unlockPromise.catch === 'function') {
+                        unlockPromise.catch(() => {
+                            // Ignorer les erreurs lors du déverrouillage
+                        });
+                    }
                 }
             };
         }
