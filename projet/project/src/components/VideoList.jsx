@@ -491,17 +491,6 @@ export default function VideoList({ onFullscreenChange }) {
           await document.msExitFullscreen();
         }
 
-        // Désactiver les contrôles natifs de Vimeo quand on sort du plein écran sur mobile
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-          (window.innerWidth <= 820);
-        if (isMobileDevice && playerRef.current) {
-          try {
-            await playerRef.current.setControls(false);
-          } catch (err) {
-            console.error("Error disabling Vimeo controls:", err);
-          }
-        }
-
         // Déverrouiller l'orientation si elle était verrouillée
         try {
           if (screen.orientation && screen.orientation.unlock) {
@@ -520,8 +509,6 @@ export default function VideoList({ onFullscreenChange }) {
 
         if (isMobileDevice && videoRef.current && playerRef.current) {
           try {
-            // Mobile : activer les contrôles natifs de Vimeo avant d'entrer en plein écran
-            await playerRef.current.setControls(true);
             // Mobile : uniquement le plein écran natif Vimeo (pas notre overlay). Le close Vimeo ramène à la page.
             await playerRef.current.requestFullscreen();
             return;
@@ -1268,14 +1255,14 @@ export default function VideoList({ onFullscreenChange }) {
                           boxSizing: 'border-box'
                         }}
                         onClick={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onMouseEnter={handleNavbarMouseEnter}
+                        onMouseLeave={handleNavbarMouseLeave}
                         onTouchStart={(e) => {
-                          e.stopPropagation();
                           // Sur mobile, afficher toujours la navbar au touch
                           setShowControls(true);
                           setIsHovering(true);
                         }}
-                        onMouseEnter={handleNavbarMouseEnter}
-                        onMouseLeave={handleNavbarMouseLeave}
                       >
                         {/* Icône PAUSE/PLAY */}
                         <div
