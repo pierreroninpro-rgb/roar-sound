@@ -260,6 +260,11 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const touchStartX = useRef(null);
+    const touchStartY = useRef(null);
+    const touchedItemRef = useRef(null); // Élément touché au début
+    const isSwipingRef = useRef(false); // Indique si c'est un swipe
+    const SWIPE_THRESHOLD = 1; // Seuil en pixels pour distinguer tap vs swipe
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
@@ -271,23 +276,48 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
         touchX.current = e.touches[0].clientX;
         lastTouchX.current = e.touches[0].clientX;
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        isSwipingRef.current = false; // Réinitialiser le flag de swipe
+        touchedItemRef.current = null; // Réinitialiser l'élément touché
     };
 
     const handleTouchMove = (e) => {
         if (isAutoCentering.current) return; // Bloquer seulement pendant l'animation de centrage
 
+        // Calculer la distance totale depuis le début du touch
+        if (touchStartX.current !== null && touchStartY.current !== null) {
+            const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
+            const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
+            const totalDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Si la distance dépasse le seuil, c'est un swipe
+            if (totalDistance > SWIPE_THRESHOLD) {
+                isSwipingRef.current = true;
+            }
+        }
+
         // acceleration ou diminution du carrousel version mobile
         const delta = e.touches[0].clientX - lastTouchX.current;
         // Vitesse réduite pour mobile (0.8x pour moins de sensibilité)
-        targetSpeed.current = -delta * 1.8;
+        targetSpeed.current = -delta * 1.4;
         lastTouchX.current = e.touches[0].clientX;
     };
 
     const handleTouchEnd = () => {
+        // Si ce n'était pas un swipe et qu'un élément a été touché, le sélectionner
+        if (!isSwipingRef.current && touchedItemRef.current) {
+            handleClick(touchedItemRef.current);
+        }
+
         // Réinitialiser la vitesse à la fin du touch
         targetSpeed.current = 0;
         touchX.current = null;
         lastTouchX.current = null;
+        touchStartX.current = null;
+        touchStartY.current = null;
+        touchedItemRef.current = null;
+        isSwipingRef.current = false;
     };
 
     const handleClick = (item) => {
@@ -404,7 +434,10 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                         e.stopPropagation();
                                         return;
                                     }
-                                    handleClick(item);
+                                    // Enregistrer l'élément touché mais ne pas sélectionner immédiatement
+                                    // La sélection se fera dans handleTouchEnd si ce n'est pas un swipe
+                                    touchedItemRef.current = item;
+                                    e.stopPropagation(); // Empêcher la propagation pour éviter les conflits
                                 }}
                                 className={`w-full ${isSelected ? 'cursor-default' : 'cursor-pointer'}`}
                                 style={{
@@ -417,7 +450,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 }}
                             />
                             <div
-                                className="text-center font-HelveticaNeue font-light pt-2 text-grey-darker"
+                                className="text-center font-HelveticaNeue font-light  text-grey-darker"
                                 style={{
                                     opacity: 1,
                                     marginTop: isMobile ? "11px" : "8px",
