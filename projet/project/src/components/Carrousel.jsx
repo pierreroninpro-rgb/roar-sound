@@ -260,6 +260,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
 
     const touchX = useRef(null);
     const lastTouchX = useRef(null);
+    const lastTapRef = useRef({ time: 0, itemId: null }); // Pour détecter le double tap
+    const tapTimeoutRef = useRef(null);
 
     const handleTouchStart = (e) => {
         // Libérer le verrouillage dès qu'on touche (sauf pendant l'auto-centrage)
@@ -288,6 +290,16 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
         targetSpeed.current = 0;
         touchX.current = null;
         lastTouchX.current = null;
+    };
+    
+    const handleDoubleTap = (item) => {
+        // Ne pas permettre de double-tapper sur l'image déjà sélectionnée
+        if (selectedVideo && selectedVideo.id === item.id) {
+            return;
+        }
+        
+        // Sélectionner la vidéo au double tap
+        handleClick(item);
     };
 
     const handleClick = (item) => {
@@ -404,7 +416,41 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                         e.stopPropagation();
                                         return;
                                     }
-                                    handleClick(item);
+                                    
+                                    // Détection du double tap
+                                    const now = Date.now();
+                                    const timeSinceLastTap = now - lastTapRef.current.time;
+                                    const DOUBLE_TAP_DELAY = 300; // Délai maximum entre deux taps (en ms)
+                                    
+                                    if (lastTapRef.current.itemId === item.id && timeSinceLastTap < DOUBLE_TAP_DELAY) {
+                                        // C'est un double tap !
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        // Annuler le timeout du premier tap
+                                        if (tapTimeoutRef.current) {
+                                            clearTimeout(tapTimeoutRef.current);
+                                            tapTimeoutRef.current = null;
+                                        }
+                                        
+                                        // Sélectionner la vidéo
+                                        handleDoubleTap(item);
+                                        
+                                        // Réinitialiser pour le prochain double tap
+                                        lastTapRef.current = { time: 0, itemId: null };
+                                    } else {
+                                        // Premier tap - attendre pour voir si c'est un double tap
+                                        lastTapRef.current = { time: now, itemId: item.id };
+                                        
+                                        // Si pas de deuxième tap dans le délai, ne rien faire (juste scroll)
+                                        if (tapTimeoutRef.current) {
+                                            clearTimeout(tapTimeoutRef.current);
+                                        }
+                                        tapTimeoutRef.current = setTimeout(() => {
+                                            lastTapRef.current = { time: 0, itemId: null };
+                                            tapTimeoutRef.current = null;
+                                        }, DOUBLE_TAP_DELAY);
+                                    }
                                 }}
                                 className={`w-full ${isSelected ? 'cursor-default' : 'cursor-pointer'}`}
                                 style={{
