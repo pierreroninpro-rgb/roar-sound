@@ -393,7 +393,7 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                                 willChange: "transform, opacity",
                             }}
                         >
-                            <img
+                           <img
                                 src={item.thumbnail || item.url || '/images/default.png'}
                                 alt={item.title || item.alt}
                                 onClick={() => handleClick(item)}
