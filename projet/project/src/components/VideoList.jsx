@@ -449,12 +449,16 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        const p = playerRef.current;
+        // Même logique que l’ancienne version qui fonctionnait : sur mobile, unmute AVANT play()
+        const isMobileDevice = window.innerWidth <= 820;
+        if (isMobileDevice) {
+          await activateSoundOnMobile();
+        }
+        await playerRef.current.play();
         setIsPlaying(true);
-        await p.setMuted(false);
-        await p.setVolume(1);
-        setIsMuted(false);
-        await p.play();
+        if (!isMobileDevice) {
+          await activateSoundOnMobile();
+        }
         controlsTimeoutRef.current = setTimeout(() => {
           if (!isHovering) {
             setShowControls(false);
@@ -809,6 +813,20 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
+  // Même helper que l’ancienne version : activer le son sur mobile après interaction
+  const activateSoundOnMobile = async () => {
+    const isMobileDevice = window.innerWidth <= 820;
+    if (isMobileDevice && playerRef.current) {
+      try {
+        await playerRef.current.setMuted(false);
+        await playerRef.current.setVolume(1);
+        setIsMuted(false);
+      } catch (err) {
+        console.error("Error unmuting video:", err);
+      }
+    }
+  };
+
   // Gérer le clic sur l'écran pour play/pause
   const handleVideoClick = async () => {
     if (!playerRef.current) return;
@@ -829,13 +847,9 @@ export default function VideoList({ onFullscreenChange }) {
         // Si on met en pause, garder les contrôles visibles
         setShowControls(true);
       } else {
-        const p = playerRef.current;
-        p.setMuted(false).catch(() => {});
-        p.setVolume(1).catch(() => {});
-        setIsMuted(false);
-        await p.play();
+        await playerRef.current.play();
         setIsPlaying(true);
-
+        await activateSoundOnMobile();
         if (!isHovering) {
           controlsTimeoutRef.current = setTimeout(() => {
             setShowControls(false);
@@ -1228,14 +1242,7 @@ export default function VideoList({ onFullscreenChange }) {
                         e.preventDefault();
                         e.stopPropagation();
                         touchHandledPlayPauseRef.current = true;
-                        // Mobile : démutage SYNCHRONE (aucun await avant) = obligatoire pour que le son marche au 1er play
-                        const p = playerRef.current;
-                        if (p) {
-                          p.setMuted(false).catch(() => {});
-                          p.setVolume(1).catch(() => {});
-                          setIsMuted(false);
-                        }
-                        await handlePlayPause();
+                        await handlePlayPause(); // même logique que l’ancienne version (activateSoundOnMobile avant play sur mobile)
                       }}
                       style={{
                         position: 'absolute',
@@ -1435,12 +1442,6 @@ export default function VideoList({ onFullscreenChange }) {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
-                            const p = playerRef.current;
-                            if (p) {
-                              p.setMuted(false).catch(() => {});
-                              p.setVolume(1).catch(() => {});
-                              setIsMuted(false);
-                            }
                             await handlePlayPause();
                           }}
                           style={{
