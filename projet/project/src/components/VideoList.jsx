@@ -486,22 +486,23 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
       setShowControls(true);
     } else {
-      // Forcer unmute ET volume AVANT play, de manière synchrone
+      // CRITIQUE : Tout doit être synchrone, dans le même tour de boucle que le touch
       p.setMuted(false);
       p.setVolume(1);
       setIsMuted(false);
 
-      // Petit délai pour laisser le navigateur traiter le unmute
-      setTimeout(() => {
-        p.play()
-          .then(() => {
-            setIsPlaying(true);
-            // Re-forcer le unmute après le play au cas où
-            p.setMuted(false);
-            p.setVolume(1);
-          })
-          .catch(() => setIsPlaying(false));
-      }, 50);
+      // Lancer la lecture immédiatement (sans setTimeout)
+      p.play()
+        .then(() => {
+          setIsPlaying(true);
+          // Double vérification après le play
+          p.setMuted(false);
+          p.setVolume(1);
+        })
+        .catch((err) => {
+          console.error("Error playing:", err);
+          setIsPlaying(false);
+        });
 
       controlsTimeoutRef.current = setTimeout(() => {
         if (!isHovering) setShowControls(false);
