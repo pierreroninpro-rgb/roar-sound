@@ -56,7 +56,6 @@ export default function VideoList({ onFullscreenChange }) {
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
   const touchHandledPlayPauseRef = useRef(false); // Mobile : ignorer le click qui suit un touch pour éviter double play/pause
-  const unmuteOnNextPlayEventRef = useRef(false); // Mobile : réessayer le démutage à l'événement "play" si le premier n'a pas pris
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -338,7 +337,6 @@ export default function VideoList({ onFullscreenChange }) {
     if (videoRef.current && selectedVideo) {
       setProgress(0);
       progressRef.current = 0;
-      unmuteOnNextPlayEventRef.current = false; // nouveau lecteur = pas de fallback démutage en attente
 
       if (playerRef.current) {
         try {
@@ -372,18 +370,6 @@ export default function VideoList({ onFullscreenChange }) {
           // Listen to play/pause events
           playerRef.current.on("play", () => {
             setIsPlaying(true);
-            // Mobile : réessayer le démutage quand la vidéo démarre (fallback si le 1er en touchstart n'a pas pris)
-            if (unmuteOnNextPlayEventRef.current && playerRef.current) {
-              unmuteOnNextPlayEventRef.current = false;
-              const pr = playerRef.current;
-              const tryUnmute = () => {
-                pr.setMuted(false).catch(() => {});
-                pr.setVolume(1).catch(() => {});
-                setIsMuted(false);
-              };
-              tryUnmute();
-              requestAnimationFrame(tryUnmute); // une 2e tentative au prochain frame au cas où le lecteur n'était pas prêt
-            }
             if (controlsTimeoutRef.current) {
               clearTimeout(controlsTimeoutRef.current);
             }
@@ -451,7 +437,6 @@ export default function VideoList({ onFullscreenChange }) {
   const handlePlayPause = async () => {
     if (!playerRef.current) return;
 
-    // Afficher les contrôles
     setShowControls(true);
     setIsHovering(true);
     if (controlsTimeoutRef.current) {
@@ -465,22 +450,11 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const p = playerRef.current;
-        // 1) Mise à jour immédiate de l'icône (play → pause) pour que le logo change tout de suite
         setIsPlaying(true);
+        await p.setMuted(false);
+        await p.setVolume(1);
         setIsMuted(false);
-
-        // 2) Mobile : play() et unmute dans le même bloc synchrone (pas d'await entre les deux)
-        const playPromise = p.play();
-        p.setMuted(false).catch(() => {});
-        p.setVolume(1).catch(() => {});
-
-        try {
-          await playPromise;
-        } catch (playErr) {
-          console.error("Error playing video:", playErr);
-          setIsPlaying(false);
-        }
-
+        await p.play();
         controlsTimeoutRef.current = setTimeout(() => {
           if (!isHovering) {
             setShowControls(false);
@@ -1248,24 +1222,13 @@ export default function VideoList({ onFullscreenChange }) {
                         e.stopPropagation();
                         await handlePlayPause();
                       }}
-                      onTouchStart={(e) => {
+                      onTouchStart={async (e) => {
                         if (e.target.closest('[data-navbar]') || e.target.closest('img')) return;
                         if (e.target !== e.currentTarget) return;
                         e.preventDefault();
                         e.stopPropagation();
                         touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
-                        const p = playerRef.current;
-                        if (!p) return;
-                        if (isPlaying) {
-                          handlePlayPause();
-                          return;
-                        }
-                        // Play : démutage SYNCHRONE (user gesture), puis handlePlayPause pour play() (évite lecteur pas prêt → écran noir)
-                        unmuteOnNextPlayEventRef.current = true;
-                        p.setMuted(false).catch(() => {});
-                        p.setVolume(1).catch(() => {});
-                        setIsMuted(false);
-                        handlePlayPause(); // pas d'await : play() géré ici, lecteur prêt
+                        await handlePlayPause(); // même logique que desktop
                       }}
                       style={{
                         position: 'absolute',
@@ -1461,21 +1424,11 @@ export default function VideoList({ onFullscreenChange }) {
                             }
                             await handlePlayPause();
                           }}
-                          onTouchStart={(e) => {
+                          onTouchStart={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
-                            const p = playerRef.current;
-                            if (!p) return;
-                            if (isPlaying) {
-                              handlePlayPause();
-                              return;
-                            }
-                            unmuteOnNextPlayEventRef.current = true;
-                            p.setMuted(false).catch(() => {});
-                            p.setVolume(1).catch(() => {});
-                            setIsMuted(false);
-                            handlePlayPause();
+                            await handlePlayPause(); // même logique que desktop
                           }}
                           style={{
                             cursor: 'pointer',
