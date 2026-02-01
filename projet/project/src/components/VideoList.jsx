@@ -1236,19 +1236,35 @@ export default function VideoList({ onFullscreenChange }) {
                         e.stopPropagation();
                         await handlePlayPause();
                       }}
-                      onTouchStart={async (e) => {
+                      onTouchStart={(e) => {
                         if (e.target.closest('[data-navbar]') || e.target.closest('img')) return;
                         if (e.target !== e.currentTarget) return;
                         e.preventDefault();
                         e.stopPropagation();
                         touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
-                        // Démutage SYNCHRONE dans le même stack que le touch (obligatoire iOS/Android pour avoir le son)
-                        if (playerRef.current) {
-                          playerRef.current.setMuted(false).catch(() => {});
-                          playerRef.current.setVolume(1).catch(() => {});
-                          setIsMuted(false);
+                        const p = playerRef.current;
+                        if (!p) return;
+                        setShowControls(true);
+                        setIsHovering(true);
+                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                        if (isPlaying) {
+                          // Pause : pas besoin de user gesture pour le son, on peut appeler handlePlayPause en async
+                          handlePlayPause();
+                          return;
                         }
-                        await handlePlayPause();
+                        // Play : TOUT en synchrone dans le même "user gesture" (aucun await) pour que le son marche sur mobile
+                        p.setMuted(false).catch(() => {});
+                        p.setVolume(1).catch(() => {});
+                        setIsMuted(false);
+                        setIsPlaying(true);
+                        p.play()
+                          .then(() => {
+                            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+                          })
+                          .catch((err) => {
+                            console.error("Error playing video:", err);
+                            setIsPlaying(false);
+                          });
                       }}
                       style={{
                         position: 'absolute',
@@ -1444,16 +1460,31 @@ export default function VideoList({ onFullscreenChange }) {
                             }
                             await handlePlayPause();
                           }}
-                          onTouchStart={async (e) => {
+                          onTouchStart={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
-                            if (playerRef.current) {
-                              playerRef.current.setMuted(false).catch(() => {});
-                              playerRef.current.setVolume(1).catch(() => {});
-                              setIsMuted(false);
+                            const p = playerRef.current;
+                            if (!p) return;
+                            setShowControls(true);
+                            setIsHovering(true);
+                            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                            if (isPlaying) {
+                              handlePlayPause();
+                              return;
                             }
-                            await handlePlayPause();
+                            p.setMuted(false).catch(() => {});
+                            p.setVolume(1).catch(() => {});
+                            setIsMuted(false);
+                            setIsPlaying(true);
+                            p.play()
+                              .then(() => {
+                                controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+                              })
+                              .catch((err) => {
+                                console.error("Error playing video:", err);
+                                setIsPlaying(false);
+                              });
                           }}
                           style={{
                             cursor: 'pointer',
