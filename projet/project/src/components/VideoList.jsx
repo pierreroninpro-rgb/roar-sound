@@ -486,22 +486,26 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
       setShowControls(true);
     } else {
-      // Chaîner les promesses pour forcer le son AVANT play
-      Promise.all([p.setMuted(false), p.setVolume(1)])
-        .then(() => {
-          setIsMuted(false);
-          return p.play();
-        })
-        .then(() => {
-          setIsPlaying(true);
-          // Triple vérification pour être sûr
-          p.setMuted(false).catch(() => {});
-          p.setVolume(1).catch(() => {});
-        })
-        .catch((err) => {
-          console.error("Error playing:", err);
-          setIsPlaying(false);
-        });
+      // Tout en synchrone, pas de chaînage de promesses (même tour de boucle que le touch)
+      try {
+        p.setMuted(false);
+        p.setVolume(1);
+        setIsMuted(false);
+
+        const playPromise = p.play();
+
+        if (playPromise) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch((err) => {
+              console.error("Error playing:", err);
+              setIsPlaying(false);
+            });
+        }
+      } catch (err) {
+        console.error("Error in playWithSoundMobileSync:", err);
+        setIsPlaying(false);
+      }
 
       controlsTimeoutRef.current = setTimeout(() => {
         if (!isHovering) setShowControls(false);
