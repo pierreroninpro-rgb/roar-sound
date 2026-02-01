@@ -335,6 +335,7 @@ export default function VideoList({ onFullscreenChange }) {
 
   // Initialize Vimeo Player when video changes
   useEffect(() => {
+    let initTimer;
     if (videoRef.current && selectedVideo) {
       setProgress(0);
       progressRef.current = 0;
@@ -347,7 +348,8 @@ export default function VideoList({ onFullscreenChange }) {
         }
       }
 
-      setTimeout(async () => {
+      // Délai minimal (0ms) pour que l’iframe ait sa nouvelle src, pour que le lecteur existe au premier tap (mobile)
+      initTimer = setTimeout(async () => {
         if (videoRef.current) {
           playerRef.current = new Player(videoRef.current);
           setIsPlaying(false);
@@ -428,10 +430,11 @@ export default function VideoList({ onFullscreenChange }) {
             }
           }
         }
-      }, 100);
+      }, 0);
     }
 
     return () => {
+      clearTimeout(initTimer);
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -483,11 +486,23 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
       setShowControls(true);
     } else {
-      p.setMuted(false).catch(() => {});
-      p.setVolume(1).catch(() => {});
+      // Forcer unmute ET volume AVANT play, de manière synchrone
+      p.setMuted(false);
+      p.setVolume(1);
       setIsMuted(false);
-      p.play().catch(() => setIsPlaying(false));
-      // isPlaying sera mis à true par le listener "play" du player
+
+      // Petit délai pour laisser le navigateur traiter le unmute
+      setTimeout(() => {
+        p.play()
+          .then(() => {
+            setIsPlaying(true);
+            // Re-forcer le unmute après le play au cas où
+            p.setMuted(false);
+            p.setVolume(1);
+          })
+          .catch(() => setIsPlaying(false));
+      }, 50);
+
       controlsTimeoutRef.current = setTimeout(() => {
         if (!isHovering) setShowControls(false);
       }, 3000);
