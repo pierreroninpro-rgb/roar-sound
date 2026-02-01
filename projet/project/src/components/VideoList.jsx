@@ -452,15 +452,22 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // IMPORTANT mobile (iOS/Android) : démutage SYNCHRONE dans le même "user gesture" que le tap.
-        // Un await avant setMuted(false) fait perdre le contexte → le navigateur refuse le son.
         const p = playerRef.current;
-        p.setMuted(false).catch(() => {});
-        p.setVolume(1).catch(() => {});
+        // 1) Mise à jour immédiate de l'icône (play → pause) pour que le logo change tout de suite
+        setIsPlaying(true);
         setIsMuted(false);
 
-        await p.play();
-        setIsPlaying(true);
+        // 2) Mobile : play() et unmute dans le même bloc synchrone (pas d'await entre les deux)
+        const playPromise = p.play();
+        p.setMuted(false).catch(() => {});
+        p.setVolume(1).catch(() => {});
+
+        try {
+          await playPromise;
+        } catch (playErr) {
+          console.error("Error playing video:", playErr);
+          setIsPlaying(false);
+        }
 
         controlsTimeoutRef.current = setTimeout(() => {
           if (!isHovering) {
