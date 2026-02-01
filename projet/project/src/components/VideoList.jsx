@@ -56,6 +56,7 @@ export default function VideoList({ onFullscreenChange }) {
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
   const touchHandledPlayPauseRef = useRef(false); // Mobile : ignorer le click qui suit un touch pour éviter double play/pause
+  const pendingPlayWithSoundRef = useRef(false); // Si l'utilisateur a tapé play pendant le chargement, on lance avec son dès que le player est prêt
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -414,6 +415,18 @@ export default function VideoList({ onFullscreenChange }) {
             // Par défaut, supposer format paysage (16:9)
             setVideoAspectRatio(16 / 9);
           }
+
+          // Si l'utilisateur a tapé play pendant le chargement : activer le son et lancer (même logique desktop)
+          if (pendingPlayWithSoundRef.current) {
+            pendingPlayWithSoundRef.current = false;
+            const p = playerRef.current;
+            if (p) {
+              p.setMuted(false).catch(() => {});
+              p.setVolume(1).catch(() => {});
+              setIsMuted(false);
+              p.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            }
+          }
         }
       }, 100);
     }
@@ -434,8 +447,28 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
+  /** Une seule fonction : activer le son puis lancer la vidéo (logique desktop). Appelée au même moment que le geste utilisateur pour que le son soit autorisé sur mobile. */
+  const activateSoundAndPlay = async () => {
+    const p = playerRef.current;
+    if (!p) return;
+    // Enchaîner unmute + volume + play sans await entre eux pour garder le "user gesture" (surtout mobile)
+    p.setMuted(false).catch(() => {});
+    p.setVolume(1).catch(() => {});
+    setIsMuted(false);
+    try {
+      await p.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.error("Error playing video:", err);
+      setIsPlaying(false);
+    }
+  };
+
   const handlePlayPause = async () => {
-    if (!playerRef.current) return;
+    if (!playerRef.current) {
+      if (!isPlaying) pendingPlayWithSoundRef.current = true;
+      return;
+    }
 
     setShowControls(true);
     setIsHovering(true);
@@ -449,16 +482,7 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // Même logique que l’ancienne version qui fonctionnait : sur mobile, unmute AVANT play()
-        const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          await activateSoundOnMobile();
-        }
-        await playerRef.current.play();
-        setIsPlaying(true);
-        if (!isMobileDevice) {
-          await activateSoundOnMobile();
-        }
+        await activateSoundAndPlay();
         controlsTimeoutRef.current = setTimeout(() => {
           if (!isHovering) {
             setShowControls(false);
@@ -689,12 +713,7 @@ export default function VideoList({ onFullscreenChange }) {
             setIsPlaying(false);
             setShowControls(true);
           } else {
-            const p = playerRef.current;
-            p.setMuted(false).catch(() => {});
-            p.setVolume(1).catch(() => {});
-            setIsMuted(false);
-            await p.play();
-            setIsPlaying(true);
+            await activateSoundAndPlay();
             controlsTimeoutRef.current = setTimeout(() => {
               setIsHovering(false);
               setShowControls(false);
@@ -813,52 +832,9 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Même helper que l’ancienne version : activer le son sur mobile après interaction
-  const activateSoundOnMobile = async () => {
-    const isMobileDevice = window.innerWidth <= 820;
-    if (isMobileDevice && playerRef.current) {
-      try {
-        await playerRef.current.setMuted(false);
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } catch (err) {
-        console.error("Error unmuting video:", err);
-      }
-    }
-  };
-
-  // Gérer le clic sur l'écran pour play/pause
-  const handleVideoClick = async () => {
-    if (!playerRef.current) return;
-
-    // Afficher les contrôles au clic
-    setShowControls(true);
-    setIsHovering(true);
-
-    // Annuler le timeout précédent si il existe
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
-    try {
-      if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
-        // Si on met en pause, garder les contrôles visibles
-        setShowControls(true);
-      } else {
-        await playerRef.current.play();
-        setIsPlaying(true);
-        await activateSoundOnMobile();
-        if (!isHovering) {
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false);
-          }, 3000);
-        }
-      }
-    } catch (err) {
-      console.error("Error toggling play/pause:", err);
-    }
+  // Espace : même logique que handlePlayPause (un seul flux partout)
+  const handleVideoClick = () => {
+    handlePlayPause();
   };
 
   // Gérer le toggle du son
