@@ -1237,6 +1237,7 @@ export default function VideoList({ onFullscreenChange }) {
                         // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
+                          e.stopPropagation(); // Éviter double toggle : le conteneur a aussi onClick={handleVideoClick}
                           await handlePlayPause();
                         }
                       }}
@@ -1247,6 +1248,7 @@ export default function VideoList({ onFullscreenChange }) {
                         }
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
+                          e.stopPropagation(); // Éviter double toggle sur mobile (overlay + conteneur)
                           await handlePlayPause();
                         }
                       }}
