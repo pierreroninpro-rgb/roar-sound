@@ -486,8 +486,7 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
       setShowControls(true);
     } else {
-      // UI optimiste : isPlaying à true immédiatement pour que le bouton passe en "pause" au premier clic
-      setIsPlaying(true);
+      // Ne pas mettre isPlaying à true ici : le listener "play" du player s'en charge quand la vidéo démarre
       setIsMuted(false);
 
       p.setMuted(false);
