@@ -56,6 +56,7 @@ export default function VideoList({ onFullscreenChange }) {
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
   const touchHandledPlayPauseRef = useRef(false); // Mobile : ignorer le click qui suit un touch pour éviter double play/pause
+  const unmuteOnNextPlayEventRef = useRef(false); // Mobile : réessayer le démutage à l'événement "play" si le premier n'a pas pris
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -335,9 +336,9 @@ export default function VideoList({ onFullscreenChange }) {
   // Initialize Vimeo Player when video changes
   useEffect(() => {
     if (videoRef.current && selectedVideo) {
-      // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
       progressRef.current = 0;
+      unmuteOnNextPlayEventRef.current = false; // nouveau lecteur = pas de fallback démutage en attente
 
       if (playerRef.current) {
         try {
@@ -371,7 +372,18 @@ export default function VideoList({ onFullscreenChange }) {
           // Listen to play/pause events
           playerRef.current.on("play", () => {
             setIsPlaying(true);
-            // Masquer les contrôles après 3 secondes seulement si on ne survole pas
+            // Mobile : réessayer le démutage quand la vidéo démarre (fallback si le 1er en touchstart n'a pas pris)
+            if (unmuteOnNextPlayEventRef.current && playerRef.current) {
+              unmuteOnNextPlayEventRef.current = false;
+              const pr = playerRef.current;
+              const tryUnmute = () => {
+                pr.setMuted(false).catch(() => {});
+                pr.setVolume(1).catch(() => {});
+                setIsMuted(false);
+              };
+              tryUnmute();
+              requestAnimationFrame(tryUnmute); // une 2e tentative au prochain frame au cas où le lecteur n'était pas prêt
+            }
             if (controlsTimeoutRef.current) {
               clearTimeout(controlsTimeoutRef.current);
             }
@@ -1248,11 +1260,11 @@ export default function VideoList({ onFullscreenChange }) {
                         setIsHovering(true);
                         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
                         if (isPlaying) {
-                          // Pause : pas besoin de user gesture pour le son, on peut appeler handlePlayPause en async
                           handlePlayPause();
                           return;
                         }
-                        // Play : TOUT en synchrone dans le même "user gesture" (aucun await) pour que le son marche sur mobile
+                        // Play : synchrone + fallback démutage à l'événement "play" si le lecteur n'était pas prêt
+                        unmuteOnNextPlayEventRef.current = true;
                         p.setMuted(false).catch(() => {});
                         p.setVolume(1).catch(() => {});
                         setIsMuted(false);
@@ -1473,6 +1485,7 @@ export default function VideoList({ onFullscreenChange }) {
                               handlePlayPause();
                               return;
                             }
+                            unmuteOnNextPlayEventRef.current = true;
                             p.setMuted(false).catch(() => {});
                             p.setVolume(1).catch(() => {});
                             setIsMuted(false);
