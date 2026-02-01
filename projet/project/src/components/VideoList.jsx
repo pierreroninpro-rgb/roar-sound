@@ -1227,8 +1227,15 @@ export default function VideoList({ onFullscreenChange }) {
                         if (e.target !== e.currentTarget) return;
                         e.preventDefault();
                         e.stopPropagation();
-                        touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
-                        await handlePlayPause(); // même logique que desktop
+                        touchHandledPlayPauseRef.current = true;
+                        // Mobile : démutage SYNCHRONE (aucun await avant) = obligatoire pour que le son marche au 1er play
+                        const p = playerRef.current;
+                        if (p) {
+                          p.setMuted(false).catch(() => {});
+                          p.setVolume(1).catch(() => {});
+                          setIsMuted(false);
+                        }
+                        await handlePlayPause();
                       }}
                       style={{
                         position: 'absolute',
@@ -1428,7 +1435,13 @@ export default function VideoList({ onFullscreenChange }) {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
-                            await handlePlayPause(); // même logique que desktop
+                            const p = playerRef.current;
+                            if (p) {
+                              p.setMuted(false).catch(() => {});
+                              p.setVolume(1).catch(() => {});
+                              setIsMuted(false);
+                            }
+                            await handlePlayPause();
                           }}
                           style={{
                             cursor: 'pointer',
