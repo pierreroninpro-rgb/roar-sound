@@ -452,19 +452,15 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
-        const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          await activateSoundOnPlay();
-        }
-        
-        await playerRef.current.play();
+        // IMPORTANT mobile (iOS/Android) : démutage SYNCHRONE dans le même "user gesture" que le tap.
+        // Un await avant setMuted(false) fait perdre le contexte → le navigateur refuse le son.
+        const p = playerRef.current;
+        p.setMuted(false).catch(() => {});
+        p.setVolume(1).catch(() => {});
+        setIsMuted(false);
+
+        await p.play();
         setIsPlaying(true);
-        
-        // Si pas mobile, activer le son après
-        if (!isMobileDevice) {
-          await activateSoundOnPlay();
-        }
 
         controlsTimeoutRef.current = setTimeout(() => {
           if (!isHovering) {
@@ -696,10 +692,12 @@ export default function VideoList({ onFullscreenChange }) {
             setIsPlaying(false);
             setShowControls(true);
           } else {
-            await playerRef.current.play();
+            const p = playerRef.current;
+            p.setMuted(false).catch(() => {});
+            p.setVolume(1).catch(() => {});
+            setIsMuted(false);
+            await p.play();
             setIsPlaying(true);
-            // Activer le son en mobile après l'interaction utilisateur
-            await activateSoundOnPlay();
             controlsTimeoutRef.current = setTimeout(() => {
               setIsHovering(false);
               setShowControls(false);
@@ -818,18 +816,6 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Activer le son à la lecture (mobile + desktop) — important pour un projet sound-design
-  const activateSoundOnPlay = async () => {
-    if (!playerRef.current) return;
-    try {
-      await playerRef.current.setMuted(false);
-      await playerRef.current.setVolume(1);
-      setIsMuted(false);
-    } catch (err) {
-      console.error("Error unmuting video:", err);
-    }
-  };
-
   // Gérer le clic sur l'écran pour play/pause
   const handleVideoClick = async () => {
     if (!playerRef.current) return;
@@ -850,12 +836,13 @@ export default function VideoList({ onFullscreenChange }) {
         // Si on met en pause, garder les contrôles visibles
         setShowControls(true);
       } else {
-        await playerRef.current.play();
+        const p = playerRef.current;
+        p.setMuted(false).catch(() => {});
+        p.setVolume(1).catch(() => {});
+        setIsMuted(false);
+        await p.play();
         setIsPlaying(true);
-        // Activer le son en mobile après l'interaction utilisateur
-        await activateSoundOnPlay();
 
-        // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
         if (!isHovering) {
           controlsTimeoutRef.current = setTimeout(() => {
             setShowControls(false);
@@ -1248,6 +1235,12 @@ export default function VideoList({ onFullscreenChange }) {
                         e.preventDefault();
                         e.stopPropagation();
                         touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
+                        // Démutage SYNCHRONE dans le même stack que le touch (obligatoire iOS/Android pour avoir le son)
+                        if (playerRef.current) {
+                          playerRef.current.setMuted(false).catch(() => {});
+                          playerRef.current.setVolume(1).catch(() => {});
+                          setIsMuted(false);
+                        }
                         await handlePlayPause();
                       }}
                       style={{
@@ -1448,6 +1441,11 @@ export default function VideoList({ onFullscreenChange }) {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
+                            if (playerRef.current) {
+                              playerRef.current.setMuted(false).catch(() => {});
+                              playerRef.current.setVolume(1).catch(() => {});
+                              setIsMuted(false);
+                            }
                             await handlePlayPause();
                           }}
                           style={{
