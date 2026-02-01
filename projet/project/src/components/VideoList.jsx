@@ -55,6 +55,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
+  const touchHandledPlayPauseRef = useRef(false); // Mobile : ignorer le click qui suit un touch pour éviter double play/pause
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -1157,7 +1158,7 @@ export default function VideoList({ onFullscreenChange }) {
                       justifyContent: 'center',
                       zIndex: isFullscreen ? 2147483646 : undefined
                     }}
-                    onClick={handleVideoClick}
+                    onClick={undefined}
                     onMouseEnter={handleVideoMouseEnter}
                     onMouseLeave={handleVideoMouseLeave}
                     onMouseMove={(e) => {
@@ -1227,30 +1228,29 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
+                    {/* Overlay transparent : UN SEUL tap/clic = play/pause. Sur mobile, touch puis click synthétique = on ignore le click. */}
                     <div
                       onClick={async (e) => {
-                        // Ne pas capturer les clics sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) return;
+                        if (e.target !== e.currentTarget) return;
+                        // Mobile : un tap déclenche touchstart PUIS click synthétique → on n'exécute qu'une fois
+                        if (touchHandledPlayPauseRef.current) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          touchHandledPlayPauseRef.current = false;
                           return;
                         }
-                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          e.stopPropagation(); // Éviter double toggle : le conteneur a aussi onClick={handleVideoClick}
-                          await handlePlayPause();
-                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        await handlePlayPause();
                       }}
                       onTouchStart={async (e) => {
-                        // Ne pas capturer les touches sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          e.stopPropagation(); // Éviter double toggle sur mobile (overlay + conteneur)
-                          await handlePlayPause();
-                        }
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) return;
+                        if (e.target !== e.currentTarget) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
+                        await handlePlayPause();
                       }}
                       style={{
                         position: 'absolute',
@@ -1435,16 +1435,21 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY */}
+                        {/* Icône PAUSE/PLAY - un seul tap = play/pause (mobile : ignorer le click après touch) */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
+                            if (touchHandledPlayPauseRef.current) {
+                              touchHandledPlayPauseRef.current = false;
+                              return;
+                            }
                             await handlePlayPause();
                           }}
                           onTouchStart={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
+                            touchHandledPlayPauseRef.current = true;
                             await handlePlayPause();
                           }}
                           style={{
