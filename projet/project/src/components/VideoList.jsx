@@ -1256,27 +1256,16 @@ export default function VideoList({ onFullscreenChange }) {
                         touchHandledPlayPauseRef.current = true; // le click qui suivra sera ignoré
                         const p = playerRef.current;
                         if (!p) return;
-                        setShowControls(true);
-                        setIsHovering(true);
-                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
                         if (isPlaying) {
                           handlePlayPause();
                           return;
                         }
-                        // Play : synchrone + fallback démutage à l'événement "play" si le lecteur n'était pas prêt
+                        // Play : démutage SYNCHRONE (user gesture), puis handlePlayPause pour play() (évite lecteur pas prêt → écran noir)
                         unmuteOnNextPlayEventRef.current = true;
                         p.setMuted(false).catch(() => {});
                         p.setVolume(1).catch(() => {});
                         setIsMuted(false);
-                        setIsPlaying(true);
-                        p.play()
-                          .then(() => {
-                            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
-                          })
-                          .catch((err) => {
-                            console.error("Error playing video:", err);
-                            setIsPlaying(false);
-                          });
+                        handlePlayPause(); // pas d'await : play() géré ici, lecteur prêt
                       }}
                       style={{
                         position: 'absolute',
@@ -1478,9 +1467,6 @@ export default function VideoList({ onFullscreenChange }) {
                             touchHandledPlayPauseRef.current = true;
                             const p = playerRef.current;
                             if (!p) return;
-                            setShowControls(true);
-                            setIsHovering(true);
-                            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
                             if (isPlaying) {
                               handlePlayPause();
                               return;
@@ -1489,15 +1475,7 @@ export default function VideoList({ onFullscreenChange }) {
                             p.setMuted(false).catch(() => {});
                             p.setVolume(1).catch(() => {});
                             setIsMuted(false);
-                            setIsPlaying(true);
-                            p.play()
-                              .then(() => {
-                                controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
-                              })
-                              .catch((err) => {
-                                console.error("Error playing video:", err);
-                                setIsPlaying(false);
-                              });
+                            handlePlayPause();
                           }}
                           style={{
                             cursor: 'pointer',
