@@ -375,8 +375,8 @@ export default function Carousel({ videos, onSelectVideo, selectedVideo, carouse
                 ref={containerRef}
                 className="relative bg-transparent cursor-pointer"
                 style={{
-                    height: `${dimensions.cardHeight + 8 + 50}px`,
-                    minHeight: '200px',
+                    height: `${dimensions.cardHeight + (isMobile ? 11 + 40 : 8 + 50)}px`,
+                    minHeight: isMobile ? `${dimensions.cardHeight + 51}px` : '200px',
                     width: '100%',
                     overflow: isMobile ? 'hidden' : 'visible'
                 }}
