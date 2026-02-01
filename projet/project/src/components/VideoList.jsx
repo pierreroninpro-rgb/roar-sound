@@ -455,7 +455,7 @@ export default function VideoList({ onFullscreenChange }) {
         // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          await activateSoundOnMobile();
+          await activateSoundOnPlay();
         }
         
         await playerRef.current.play();
@@ -463,7 +463,7 @@ export default function VideoList({ onFullscreenChange }) {
         
         // Si pas mobile, activer le son après
         if (!isMobileDevice) {
-          await activateSoundOnMobile();
+          await activateSoundOnPlay();
         }
 
         controlsTimeoutRef.current = setTimeout(() => {
@@ -699,7 +699,7 @@ export default function VideoList({ onFullscreenChange }) {
             await playerRef.current.play();
             setIsPlaying(true);
             // Activer le son en mobile après l'interaction utilisateur
-            await activateSoundOnMobile();
+            await activateSoundOnPlay();
             controlsTimeoutRef.current = setTimeout(() => {
               setIsHovering(false);
               setShowControls(false);
@@ -818,17 +818,15 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Fonction helper pour activer le son en mobile après une interaction utilisateur
-  const activateSoundOnMobile = async () => {
-    const isMobileDevice = window.innerWidth <= 820;
-    if (isMobileDevice && playerRef.current) {
-      try {
-        await playerRef.current.setMuted(false);
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } catch (err) {
-        console.error("Error unmuting video:", err);
-      }
+  // Activer le son à la lecture (mobile + desktop) — important pour un projet sound-design
+  const activateSoundOnPlay = async () => {
+    if (!playerRef.current) return;
+    try {
+      await playerRef.current.setMuted(false);
+      await playerRef.current.setVolume(1);
+      setIsMuted(false);
+    } catch (err) {
+      console.error("Error unmuting video:", err);
     }
   };
 
@@ -855,7 +853,7 @@ export default function VideoList({ onFullscreenChange }) {
         await playerRef.current.play();
         setIsPlaying(true);
         // Activer le son en mobile après l'interaction utilisateur
-        await activateSoundOnMobile();
+        await activateSoundOnPlay();
 
         // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
         if (!isHovering) {
