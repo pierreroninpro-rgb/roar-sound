@@ -486,18 +486,17 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
       setShowControls(true);
     } else {
-      // CRITIQUE : Tout doit être synchrone, dans le même tour de boucle que le touch
-      p.setMuted(false);
-      p.setVolume(1);
-      setIsMuted(false);
-
-      // Lancer la lecture immédiatement (sans setTimeout)
-      p.play()
+      // Chaîner les promesses pour forcer le son AVANT play
+      Promise.all([p.setMuted(false), p.setVolume(1)])
+        .then(() => {
+          setIsMuted(false);
+          return p.play();
+        })
         .then(() => {
           setIsPlaying(true);
-          // Double vérification après le play
-          p.setMuted(false);
-          p.setVolume(1);
+          // Triple vérification pour être sûr
+          p.setMuted(false).catch(() => {});
+          p.setVolume(1).catch(() => {});
         })
         .catch((err) => {
           console.error("Error playing:", err);
