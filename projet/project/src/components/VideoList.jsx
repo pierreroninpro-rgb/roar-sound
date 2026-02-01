@@ -447,11 +447,10 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  /** Une seule fonction : activer le son puis lancer la vidéo (logique desktop). Appelée au même moment que le geste utilisateur pour que le son soit autorisé sur mobile. */
+  /** Une seule fonction : activer le son puis lancer la vidéo (logique desktop). */
   const activateSoundAndPlay = async () => {
     const p = playerRef.current;
     if (!p) return;
-    // Enchaîner unmute + volume + play sans await entre eux pour garder le "user gesture" (surtout mobile)
     p.setMuted(false).catch(() => {});
     p.setVolume(1).catch(() => {});
     setIsMuted(false);
@@ -461,6 +460,37 @@ export default function VideoList({ onFullscreenChange }) {
     } catch (err) {
       console.error("Error playing video:", err);
       setIsPlaying(false);
+    }
+  };
+
+  /**
+   * Mobile uniquement : activer le son et lancer la vidéo SANS aucun await.
+   * Le navigateur mobile n’autorise le son que si tout est fait dans le même tour de boucle que le touch.
+   * Ne pas appeler en async / ne pas await cette fonction depuis le handler de touch.
+   */
+  const playWithSoundMobileSync = () => {
+    const p = playerRef.current;
+    if (!p) {
+      if (!isPlaying) pendingPlayWithSoundRef.current = true;
+      return;
+    }
+    setShowControls(true);
+    setIsHovering(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+
+    if (isPlaying) {
+      p.pause().catch(() => {});
+      setIsPlaying(false);
+      setShowControls(true);
+    } else {
+      p.setMuted(false).catch(() => {});
+      p.setVolume(1).catch(() => {});
+      setIsMuted(false);
+      p.play().catch(() => setIsPlaying(false));
+      // isPlaying sera mis à true par le listener "play" du player
+      controlsTimeoutRef.current = setTimeout(() => {
+        if (!isHovering) setShowControls(false);
+      }, 3000);
     }
   };
 
@@ -1212,13 +1242,13 @@ export default function VideoList({ onFullscreenChange }) {
                         e.stopPropagation();
                         await handlePlayPause();
                       }}
-                      onTouchStart={async (e) => {
+                      onTouchStart={(e) => {
                         if (e.target.closest('[data-navbar]') || e.target.closest('img')) return;
                         if (e.target !== e.currentTarget) return;
                         e.preventDefault();
                         e.stopPropagation();
                         touchHandledPlayPauseRef.current = true;
-                        await handlePlayPause(); // même logique que l’ancienne version (activateSoundOnMobile avant play sur mobile)
+                        playWithSoundMobileSync(); // même logique que l’ancienne version (activateSoundOnMobile avant play sur mobile)
                       }}
                       style={{
                         position: 'absolute',
@@ -1317,10 +1347,10 @@ export default function VideoList({ onFullscreenChange }) {
                               e.preventDefault();
                               await handlePlayPause();
                             }}
-                            onTouchStart={async (e) => {
+                            onTouchStart={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              await handlePlayPause();
+                              playWithSoundMobileSync();
                             }}
                             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
@@ -1414,11 +1444,11 @@ export default function VideoList({ onFullscreenChange }) {
                             }
                             await handlePlayPause();
                           }}
-                          onTouchStart={async (e) => {
+                          onTouchStart={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
                             touchHandledPlayPauseRef.current = true;
-                            await handlePlayPause();
+                            playWithSoundMobileSync();
                           }}
                           style={{
                             cursor: 'pointer',
