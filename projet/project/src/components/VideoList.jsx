@@ -1334,28 +1334,31 @@ export default function VideoList({ onFullscreenChange }) {
                           >
                             <img src={isPlaying ? '/images/pause.png' : '/images/play.png'} alt={isPlaying ? 'Pause' : 'Play'} style={{ width: '20px', height: '20px' }} />
                           </div>
-                          <div
-                            className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                            onClick={async (e) => {
-                              if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
-                              e.stopPropagation();
-                              seekedFromTouchRef.current = false;
-                              await seekBarAtClientX(e.clientX, progressBarRef.current);
-                            }}
-                            onTouchEnd={(e) => {
-                              if (isDraggingProgressState || justFinishedDragRef.current) return;
-                              if (!e.changedTouches?.length) return;
-                              e.preventDefault();
-                              e.stopPropagation();
-                              seekedFromTouchRef.current = true;
-                              seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
-                              setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
-                            }}
-                          >
-                            <div ref={progressBarRef} className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible">
-                              <div className="absolute top-0 left-0 h-full bg-white rounded-full" style={{ width: `${progress}%`, transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out' }} />
+                          {/* Barre de progression - masquée pour vidéos portrait en mobile pour laisser la place à Play/Pause + Son + Fullscreen */}
+                          {!(visibleVideoDimensions.leftOffset > 0 && spacing.isMobile) && (
+                            <div
+                              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                              onClick={async (e) => {
+                                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = false;
+                                await seekBarAtClientX(e.clientX, progressBarRef.current);
+                              }}
+                              onTouchEnd={(e) => {
+                                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                                if (!e.changedTouches?.length) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = true;
+                                seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
+                              }}
+                            >
+                              <div ref={progressBarRef} className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible">
+                                <div className="absolute top-0 left-0 h-full bg-white rounded-full" style={{ width: `${progress}%`, transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out' }} />
+                              </div>
                             </div>
-                          </div>
+                          )}
                           <div onClick={(e) => { e.stopPropagation(); handleToggleMute(e); }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <img src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'} alt={isMuted ? 'Unmute' : 'Mute'} style={{ width: '36px', height: '36px' }} />
                           </div>
