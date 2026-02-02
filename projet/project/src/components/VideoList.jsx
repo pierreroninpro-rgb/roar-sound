@@ -1208,8 +1208,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Fond noir paysage uniquement sur desktop ; mobile : toujours transparent
-                      backgroundColor: !isFullscreen ? (spacing.isMobile ? 'transparent' : (videoAspectRatio >= 1 ? '#000' : 'transparent')) : '#000',
+                      // Mobile : noir comme avant (code de ref) ; desktop : noir paysage, transparent portrait
+                      backgroundColor: !isFullscreen ? (spacing.isMobile ? '#000' : (videoAspectRatio >= 1 ? '#000' : 'transparent')) : '#000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1237,7 +1237,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: !isFullscreen ? (spacing.isMobile ? 'transparent' : (videoAspectRatio >= 1 ? '#000' : 'transparent')) : '#000',
+                        backgroundColor: !isFullscreen ? (spacing.isMobile ? '#000' : (videoAspectRatio >= 1 ? '#000' : 'transparent')) : '#000',
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1259,7 +1259,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${!isFullscreen ? 1 : 0}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${!isFullscreen ? (spacing.isMobile ? 0 : 1) : 0}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1284,28 +1284,28 @@ export default function VideoList({ onFullscreenChange }) {
                         mozallowfullscreen
                         title={selectedVideo.title}
                       />
-                      {/* Navbar : mobile = toute la largeur (left/right 0) ; desktop = même largeur que la vidéo visible */}
+                      {/* Navbar : mobile = comme avant (left/right horizontalMargin) ; desktop = même largeur que la vidéo visible */}
                       {!isFullscreen && (
                         <div
                           data-navbar
                           className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                           style={{
-                            position: 'absolute',
-                            bottom: '4px',
-                            ...(spacing.isMobile
-                              ? { left: 0, right: 0 }
-                              : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
-                            ),
                             padding: '0.1rem 1rem',
                             paddingBottom: 'calc(0.1rem + 4px)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '1rem',
+                            position: 'absolute',
+                            bottom: '4px',
+                            ...(spacing.isMobile
+                              ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
+                              : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
+                            ),
+                            transition: 'opacity 0.3s ease-in-out',
                             zIndex: 20,
                             pointerEvents: 'auto',
                             fontFamily: "'Helvetica', 'Arial', sans-serif",
-                            boxSizing: 'border-box',
-                            transition: 'opacity 0.3s ease-in-out'
+                            boxSizing: 'border-box'
                           }}
                           onClick={(e) => e.stopPropagation()}
                           onTouchStart={(e) => {
