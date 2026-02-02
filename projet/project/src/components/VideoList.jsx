@@ -1284,7 +1284,7 @@ export default function VideoList({ onFullscreenChange }) {
                         mozallowfullscreen
                         title={selectedVideo.title}
                       />
-                      {/* Navbar dans le cadre vidéo : même largeur que la vidéo (portrait = barre plus étroite) */}
+                      {/* Navbar : mobile = toute la largeur (left/right 0) ; desktop = même largeur que la vidéo visible */}
                       {!isFullscreen && (
                         <div
                           data-navbar
@@ -1292,8 +1292,10 @@ export default function VideoList({ onFullscreenChange }) {
                           style={{
                             position: 'absolute',
                             bottom: '4px',
-                            left: `${visibleVideoDimensions.leftOffset}px`,
-                            width: visibleVideoDimensions.width,
+                            ...(spacing.isMobile
+                              ? { left: 0, right: 0 }
+                              : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
+                            ),
                             padding: '0.1rem 1rem',
                             paddingBottom: 'calc(0.1rem + 4px)',
                             display: 'flex',
