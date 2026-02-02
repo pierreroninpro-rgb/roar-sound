@@ -1201,7 +1201,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=0`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${(spacing.isMobile && !isFullscreen) ? 1 : 0}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
