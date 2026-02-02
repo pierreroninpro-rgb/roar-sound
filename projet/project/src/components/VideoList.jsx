@@ -1329,8 +1329,8 @@ export default function VideoList({ onFullscreenChange }) {
                           >
                             <img src={isPlaying ? '/images/pause.png' : '/images/play.png'} alt={isPlaying ? 'Pause' : 'Play'} style={{ width: '20px', height: '20px' }} />
                           </div>
-                          {/* Barre de progression : masquée uniquement pour vidéos portrait (leftOffset > 0) en mobile */}
-                          {!(visibleVideoDimensions.leftOffset > 0 && spacing.isMobile) && (
+                          {/* Barre de progression : masquée pour vidéos portrait (ratio < 1) en mobile uniquement */}
+                          {!(videoAspectRatio < 1 && spacing.isMobile) && (
                             <div
                               className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
                               onClick={async (e) => {
@@ -1354,9 +1354,12 @@ export default function VideoList({ onFullscreenChange }) {
                               </div>
                             </div>
                           )}
-                          <div onClick={(e) => { e.stopPropagation(); handleToggleMute(e); }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <img src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'} alt={isMuted ? 'Unmute' : 'Mute'} style={{ width: '36px', height: '36px' }} />
-                          </div>
+                          {/* Bouton son : masqué pour vidéos portrait (ratio < 1) en mobile pour garder de la place */}
+                          {!(videoAspectRatio < 1 && spacing.isMobile) && (
+                            <div onClick={(e) => { e.stopPropagation(); handleToggleMute(e); }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <img src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'} alt={isMuted ? 'Unmute' : 'Mute'} style={{ width: '36px', height: '36px' }} />
+                            </div>
+                          )}
                           {!(spacing.isMobile && isFullscreen) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
