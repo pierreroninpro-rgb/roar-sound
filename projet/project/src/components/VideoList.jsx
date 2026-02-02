@@ -56,6 +56,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
+  const lastPlayPauseTapRef = useRef(0); // Anti double-tap mobile (touch + click)
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
     navbarSpacing: 41,
@@ -495,6 +496,14 @@ export default function VideoList({ onFullscreenChange }) {
   const handlePlayPause = async () => {
     if (!playerRef.current) return;
 
+    const isMobileDevice = window.innerWidth <= 820;
+    // Sur mobile : éviter double déclenchement (touch + click) et saccades
+    if (isMobileDevice) {
+      const now = Date.now();
+      if (now - lastPlayPauseTapRef.current < 500) return;
+      lastPlayPauseTapRef.current = now;
+    }
+
     // Afficher les contrôles
     setShowControls(true);
     setIsHovering(true);
@@ -508,16 +517,15 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
-        const isMobileDevice = window.innerWidth <= 820;
+        // Sur mobile : unmute sans attendre (évite latence), puis play tout de suite
         if (isMobileDevice) {
-          await activateSoundOnMobile();
+          playerRef.current.setMuted(false).catch(() => {});
+          playerRef.current.setVolume(1).catch(() => {});
+          setIsMuted(false);
         }
-        
         await playerRef.current.play();
         setIsPlaying(true);
-        
-        // Si pas mobile, activer le son après
+
         if (!isMobileDevice) {
           await activateSoundOnMobile();
         }
