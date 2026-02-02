@@ -1151,7 +1151,7 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      backgroundColor: '#000', // Noir partout : bandes letterbox noires (pas de bords blancs)
+                      backgroundColor: (spacing.isMobile && !isFullscreen) ? 'transparent' : '#000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1179,7 +1179,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: '#000', // Bande noire si la vidéo a des bords blancs ou letterbox
+                        backgroundColor: (spacing.isMobile && !isFullscreen) ? 'transparent' : '#000',
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
