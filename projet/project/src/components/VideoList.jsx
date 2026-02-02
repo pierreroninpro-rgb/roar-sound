@@ -1318,23 +1318,18 @@ export default function VideoList({ onFullscreenChange }) {
                             onClick={async (e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              if (touchHandledPlayPauseRef.current) {
-                                touchHandledPlayPauseRef.current = false;
-                                return;
-                              }
                               await handlePlayPause();
                             }}
-                            onTouchStart={(e) => {
+                            onTouchStart={async (e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              touchHandledPlayPauseRef.current = true;
-                              playWithSoundMobileSync();
+                              await handlePlayPause();
                             }}
                             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             <img src={isPlaying ? '/images/pause.png' : '/images/play.png'} alt={isPlaying ? 'Pause' : 'Play'} style={{ width: '20px', height: '20px' }} />
                           </div>
-                          {/* Barre de progression - masquée pour vidéos portrait en mobile pour laisser la place à Play/Pause + Son + Fullscreen */}
+                          {/* Barre de progression : masquée uniquement pour vidéos portrait (leftOffset > 0) en mobile */}
                           {!(visibleVideoDimensions.leftOffset > 0 && spacing.isMobile) && (
                             <div
                               className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
