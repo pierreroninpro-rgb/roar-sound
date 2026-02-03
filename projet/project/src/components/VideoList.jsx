@@ -1225,8 +1225,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Téléphone = toujours transparent ; sinon vidéos larges ou un peu moins larges (leftOffset sous seuil) = noir ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                      // Mobile = noir (comme ancien code) ; desktop vidéos larges ou leftOffset sous seuil = noir ; fullscreen = noir
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1254,7 +1254,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1276,7 +1276,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 1 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1483,11 +1483,11 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: '0.1rem 0.75rem',
+                          padding: spacing.isMobile ? '0.1rem 1rem' : '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem',
+                          gap: spacing.isMobile ? '1rem' : '0.5rem',
                           justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
@@ -1511,7 +1511,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY - taille fixe, ne se déforme pas */}
+                        {/* Icône PAUSE/PLAY - mobile = ancien code (style simple), desktop = taille fixe */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1523,7 +1523,12 @@ export default function VideoList({ onFullscreenChange }) {
                             e.preventDefault();
                             await handlePlayPause();
                           }}
-                          style={{
+                          style={spacing.isMobile ? {
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          } : {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -1536,7 +1541,7 @@ export default function VideoList({ onFullscreenChange }) {
                           <img
                             src={isPlaying ? '/images/pause.png' : '/images/play.png'}
                             alt={isPlaying ? 'Pause' : 'Play'}
-                            style={{
+                            style={spacing.isMobile ? { width: '20px', height: '20px' } : {
                               width: '20px',
                               height: '20px',
                               objectFit: 'contain',
@@ -1545,10 +1550,10 @@ export default function VideoList({ onFullscreenChange }) {
                           />
                         </div>
 
-                        {/* Barre de progression - plus de place (minWidth + flex-1) */}
+                        {/* Barre de progression - minWidth desktop uniquement (mobile = ancien code) */}
                         <div
                           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                          style={{ minWidth: '100px' }}
+                          style={spacing.isMobile ? undefined : { minWidth: '100px' }}
                           onClick={async (e) => {
                             if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
@@ -1579,8 +1584,8 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         </div>
 
-                        {/* Icône MUTE/UNMUTE - masquée pour une UX plus épurée */}
-                        {false && (
+                        {/* Icône MUTE/UNMUTE - visible sur mobile (ancien code), masquée sur desktop */}
+                        {(spacing.isMobile) && (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
