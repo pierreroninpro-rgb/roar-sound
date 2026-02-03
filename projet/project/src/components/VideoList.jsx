@@ -24,6 +24,9 @@ const REFERENCE_VALUES = {
   }
 };
 
+// Seuil (px) : si bandes sur les côtés <= ce nombre au total (leftOffset*2), on applique quand même le fond noir (vidéos "un peu moins larges")
+const LEFT_OFFSET_BLACK_THRESHOLD_PX = 60;
+
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -593,7 +596,8 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop : ton code actuel**
+        // **Desktop : capturer si on jouait avant fullscreen, puis reprendre après**
+        const shouldResumePlay = isPlaying;
         const elementToFullscreen = document.documentElement;
 
         try {
@@ -633,6 +637,17 @@ export default function VideoList({ onFullscreenChange }) {
 
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
+
+        // Reprendre la lecture après passage en fullscreen (le navigateur peut mettre en pause)
+        if (shouldResumePlay && playerRef.current) {
+          setTimeout(() => {
+            if (playerRef.current) {
+              playerRef.current.play()
+                .then(() => setIsPlaying(true))
+                .catch((e) => console.log("Resume play error:", e));
+            }
+          }, 300);
+        }
 
         // Reste du code pour desktop (orientation lock, etc.)
         try {
@@ -1210,8 +1225,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Vidéos plus larges (bandes haut/bas) = noir ; vidéos moins larges (bandes côtés) = transparent ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset === 0 ? '#000' : 'transparent'),
+                      // Téléphone = toujours transparent ; sinon vidéos larges ou un peu moins larges (leftOffset sous seuil) = noir ; fullscreen = noir
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1239,7 +1254,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset === 0 ? '#000' : 'transparent'),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1261,7 +1276,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (visibleVideoDimensions.leftOffset === 0 ? 0 : 1)}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 1 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1468,11 +1483,12 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: '0.1rem 1rem',
+                          padding: '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '1rem',
+                          gap: '0.5rem',
+                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
                           ...(spacing.isMobile
@@ -1495,7 +1511,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY */}
+                        {/* Icône PAUSE/PLAY - taille fixe, ne se déforme pas */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1511,7 +1527,10 @@ export default function VideoList({ onFullscreenChange }) {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            width: '20px',
+                            height: '20px'
                           }}
                         >
                           <img
@@ -1519,14 +1538,17 @@ export default function VideoList({ onFullscreenChange }) {
                             alt={isPlaying ? 'Pause' : 'Play'}
                             style={{
                               width: '20px',
-                              height: '20px'
+                              height: '20px',
+                              objectFit: 'contain',
+                              flexShrink: 0
                             }}
                           />
                         </div>
 
-                        {/* Barre de progression */}
+                        {/* Barre de progression - plus de place (minWidth + flex-1) */}
                         <div
                           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                          style={{ minWidth: '100px' }}
                           onClick={async (e) => {
                             if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
@@ -1557,28 +1579,30 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         </div>
 
-                        {/* Icône MUTE/UNMUTE */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleMute(e);
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <img
-                            src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
-                            alt={isMuted ? 'Unmute' : 'Mute'}
-                            style={{
-                              width: '36px',
-                              height: '36px'
+                        {/* Icône MUTE/UNMUTE - masquée pour une UX plus épurée */}
+                        {false && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleMute(e);
                             }}
-                          />
-                        </div>
+                            style={{
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <img
+                              src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                              alt={isMuted ? 'Unmute' : 'Mute'}
+                              style={{
+                                width: '36px',
+                                height: '36px'
+                              }}
+                            />
+                          </div>
+                        )}
 
                         {/* Bouton Fullscreen - Masqué en plein écran mobile natif */}
                         {!(spacing.isMobile && isFullscreen) && (
