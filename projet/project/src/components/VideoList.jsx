@@ -500,10 +500,9 @@ export default function VideoList({ onFullscreenChange }) {
     }
     const containerRatio = w / h;
     const videoRatio = videoAspectRatio;
-    const scale = containerRatio > videoRatio
-      ? containerRatio / videoRatio
-      : videoRatio / containerRatio;
-    setMobileCoverScale(Math.max(1, scale));
+    // Zoom uniquement pour les vidéos les plus larges (bandes sur les côtés) : container plus large que le ratio vidéo
+    const scale = containerRatio > videoRatio ? containerRatio / videoRatio : 1;
+    setMobileCoverScale(scale);
   };
 
   // Recalculer les dimensions visibles et le zoom cover mobile quand le ratio ou la taille change
