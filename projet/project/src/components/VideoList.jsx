@@ -578,8 +578,30 @@ export default function VideoList({ onFullscreenChange }) {
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
           (window.innerWidth <= 820);
 
-        // Mobile et desktop : fullscreen du document pour que la rotation pivote avec le fullscreen (pas le fullscreen Vimeo qui revient au visu initial)
-        // **Capturer si on jouait avant fullscreen, puis reprendre après**
+        if (isMobileDevice && videoRef.current && playerRef.current) {
+          try {
+            // Mobile : uniquement le plein écran natif Vimeo (pas notre overlay). Le close Vimeo ramène à la page.
+            await playerRef.current.requestFullscreen();
+            return;
+          } catch (err) {
+            console.error("Mobile Vimeo fullscreen error:", err);
+            try {
+              const iframe = videoRef.current;
+              if (iframe.requestFullscreen) {
+                await iframe.requestFullscreen();
+              } else if (iframe.webkitRequestFullscreen) {
+                await iframe.webkitRequestFullscreen();
+              } else if (iframe.mozRequestFullScreen) {
+                await iframe.mozRequestFullScreen();
+              }
+              return;
+            } catch (fallbackErr) {
+              console.error("Fallback fullscreen also failed:", fallbackErr);
+            }
+          }
+        }
+
+        // **Desktop : capturer si on jouait avant fullscreen, puis reprendre après**
         const shouldResumePlay = isPlaying;
         const elementToFullscreen = document.documentElement;
 
@@ -665,26 +687,7 @@ export default function VideoList({ onFullscreenChange }) {
   };
 
 
-  // Recalculer les dimensions letterbox en fullscreen (entrée fullscreen ou rotation mobile)
-  const updateFullscreenDimensions = () => {
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-    const aspectRatio = videoAspectRatioRef.current;
-    let iframeWidth, iframeHeight;
-    if (screenWidth / screenHeight > aspectRatio) {
-      iframeHeight = screenHeight;
-      iframeWidth = screenHeight * aspectRatio;
-    } else {
-      iframeWidth = screenWidth;
-      iframeHeight = screenWidth / aspectRatio;
-    }
-    setFullscreenVideoDimensions({
-      width: `${iframeWidth}px`,
-      height: `${iframeHeight}px`
-    });
-  };
-
-  // Écouter les changements de plein écran + resize/orientation pour que le fullscreen pivote avec le mobile
+  // Écouter les changements de plein écran et gérer les événements en mode plein écran
   useEffect(() => {
     const handleFullscreenChange = () => {
       const fullscreenElement = document.fullscreenElement ||
@@ -692,25 +695,35 @@ export default function VideoList({ onFullscreenChange }) {
         document.mozFullScreenElement ||
         document.msFullscreenElement;
       const isCurrentlyFullscreen = !!fullscreenElement;
+
+      // Vérifier que c'est bien le document entier qui est en plein écran (ou notre conteneur pour compatibilité)
       const isOurFullscreen = fullscreenElement === document.documentElement || fullscreenElement === videoContainerRef.current;
 
       setIsFullscreen(isCurrentlyFullscreen && isOurFullscreen);
       if (onFullscreenChange) onFullscreenChange(isCurrentlyFullscreen && isOurFullscreen);
+      // Forcer l'affichage des contrôles quand on entre/sort du plein écran
       if (isCurrentlyFullscreen && isOurFullscreen) {
         setShowControls(true);
         setIsHovering(true);
-        updateFullscreenDimensions();
-      }
-    };
+        // Calculer les dimensions pour letterboxing (ratio de la vidéo, via ref pour valeur à jour)
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const aspectRatio = videoAspectRatioRef.current;
 
-    const handleResizeOrOrientation = () => {
-      const fullscreenElement = document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement;
-      const isOurFullscreen = fullscreenElement === document.documentElement || fullscreenElement === videoContainerRef.current;
-      if (fullscreenElement && isOurFullscreen) {
-        updateFullscreenDimensions();
+        let iframeWidth, iframeHeight;
+
+        if (screenWidth / screenHeight > aspectRatio) {
+          iframeHeight = screenHeight;
+          iframeWidth = screenHeight * aspectRatio;
+        } else {
+          iframeWidth = screenWidth;
+          iframeHeight = screenWidth / aspectRatio;
+        }
+
+        setFullscreenVideoDimensions({
+          width: `${iframeWidth}px`,
+          height: `${iframeHeight}px`
+        });
       }
     };
 
@@ -718,16 +731,12 @@ export default function VideoList({ onFullscreenChange }) {
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-    window.addEventListener('resize', handleResizeOrOrientation);
-    window.addEventListener('orientationchange', handleResizeOrOrientation);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-      window.removeEventListener('resize', handleResizeOrOrientation);
-      window.removeEventListener('orientationchange', handleResizeOrOrientation);
     };
   }, []);
 
