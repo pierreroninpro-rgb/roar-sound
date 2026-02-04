@@ -1232,7 +1232,6 @@ export default function VideoList({ onFullscreenChange }) {
                       justifyContent: 'center',
                       zIndex: isFullscreen ? 2147483646 : undefined
                     }}
-                    onClick={handleVideoClick}
                     onMouseEnter={handleVideoMouseEnter}
                     onMouseLeave={handleVideoMouseLeave}
                     onMouseMove={(e) => {
@@ -1302,38 +1301,16 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
+                    {/* Overlay : plus de play/pause ici — seule la barre de lecture déclenche play/pause (évite double toggle) */}
                     <div
-                      onClick={async (e) => {
-                        // Ne pas capturer les clics sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }
-                      }}
-                      onTouchStart={async (e) => {
-                        // Ne pas capturer les touches sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }
-                      }}
                       style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        zIndex: 10, // Au-dessus de l'iframe mais en-dessous des contrôles fullscreen
-                        pointerEvents: 'auto',
-                        cursor: 'pointer',
+                        zIndex: 10,
+                        pointerEvents: 'none',
                         backgroundColor: 'transparent'
                       }}
                     />
