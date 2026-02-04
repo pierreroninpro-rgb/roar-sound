@@ -523,10 +523,16 @@ export default function VideoList({ onFullscreenChange }) {
             setIsMuted(false);
           }
           setIsPlaying(true); // Mise à jour immédiate de l’icône (play → pause)
-          playerRef.current.play().catch((err) => {
-            console.error("Error controlling video:", err);
-            setIsPlaying(false);
-          });
+          playerRef.current.play()
+            .then(() => {
+              playerRef.current?.setMuted(false).catch(() => {});
+              playerRef.current?.setVolume(1).catch(() => {});
+              setIsMuted(false);
+            })
+            .catch((err) => {
+              console.error("Error controlling video:", err);
+              setIsPlaying(false);
+            });
         } else {
           await playerRef.current.play();
           setIsPlaying(true);
