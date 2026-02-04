@@ -59,6 +59,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
+  const iframeSrcRef = useRef(''); // Ref pour garder le même src en fullscreen et éviter le rechargement (pause sur vidéos "moins larges")
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -1275,7 +1276,12 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
+                        src={(() => {
+                          const transparent = spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1);
+                          const nonFullscreenSrc = `${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${transparent}`;
+                          if (!isFullscreen) iframeSrcRef.current = nonFullscreenSrc;
+                          return isFullscreen ? (iframeSrcRef.current || nonFullscreenSrc) : nonFullscreenSrc;
+                        })()}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
