@@ -43,6 +43,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
+  const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom dynamique mobile pour que la vidéo remplisse le conteneur (videos larges)
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -485,16 +486,43 @@ export default function VideoList({ onFullscreenChange }) {
     setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
   };
 
-  // Recalculer les dimensions visibles quand le ratio ou la taille change
+  const updateMobileCoverScale = () => {
+    const isMobile = window.innerWidth <= 500;
+    if (!isMobile || isFullscreen || !videoContainerRef.current || !(videoAspectRatio > 0)) {
+      setMobileCoverScale(1);
+      return;
+    }
+    const w = videoContainerRef.current.offsetWidth;
+    const h = videoContainerRef.current.offsetHeight;
+    if (w <= 0 || h <= 0) {
+      setMobileCoverScale(1);
+      return;
+    }
+    const containerRatio = w / h;
+    const videoRatio = videoAspectRatio;
+    const scale = containerRatio > videoRatio
+      ? containerRatio / videoRatio
+      : videoRatio / containerRatio;
+    setMobileCoverScale(Math.max(1, scale));
+  };
+
+  // Recalculer les dimensions visibles et le zoom cover mobile quand le ratio ou la taille change
   useEffect(() => {
     calculateVisibleVideoDimensions();
+    const rafId = requestAnimationFrame(() => {
+      updateMobileCoverScale();
+    });
 
     const handleResize = () => {
       calculateVisibleVideoDimensions();
+      updateMobileCoverScale();
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
 
   const handlePlayPause = async () => {
@@ -1225,8 +1253,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Même logique mobile/desktop : vidéos larges ou un peu moins larges = noir, moins larges = transparent ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
+                      // Mobile = noir (comme ancien code) ; desktop vidéos larges ou leftOffset sous seuil = noir ; fullscreen = noir
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1253,7 +1281,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1261,7 +1289,11 @@ export default function VideoList({ onFullscreenChange }) {
                           maxHeight: '100%',
                           aspectRatio: videoAspectRatio,
                           position: 'relative',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          ...(spacing.isMobile && {
+                            transform: `scale(${mobileCoverScale})`,
+                            transformOrigin: 'center center'
+                          })
                         }),
                         ...(isFullscreen && {
                           width: '100%',
@@ -1275,7 +1307,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1)}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1465,11 +1497,13 @@ export default function VideoList({ onFullscreenChange }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: spacing.isMobile ? '1rem' : '0.5rem',
-                          justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
+                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          left: `${visibleVideoDimensions.leftOffset}px`,
-                          width: visibleVideoDimensions.width,
+                          ...(spacing.isMobile
+                            ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
+                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
+                          ),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
