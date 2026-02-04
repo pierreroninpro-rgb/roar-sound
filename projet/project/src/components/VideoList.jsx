@@ -522,7 +522,8 @@ export default function VideoList({ onFullscreenChange }) {
             playerRef.current.setVolume(1).catch(() => {});
             setIsMuted(false);
           }
-          playerRef.current.play().then(() => setIsPlaying(true)).catch((err) => {
+          setIsPlaying(true); // Mise à jour immédiate de l’icône (play → pause)
+          playerRef.current.play().catch((err) => {
             console.error("Error controlling video:", err);
             setIsPlaying(false);
           });
@@ -1231,7 +1232,7 @@ export default function VideoList({ onFullscreenChange }) {
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
                       // Mobile = noir (comme ancien code) ; desktop vidéos larges ou leftOffset sous seuil = noir ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1258,7 +1259,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1281,7 +1282,7 @@ export default function VideoList({ onFullscreenChange }) {
                         ref={videoRef}
                         key={selectedVideo.id}
                         src={(() => {
-                          const transparent = spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1);
+                          const transparent = spacing.isMobile ? 1 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1);
                           const nonFullscreenSrc = `${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${transparent}`;
                           if (!isFullscreen) iframeSrcRef.current = nonFullscreenSrc;
                           return isFullscreen ? (iframeSrcRef.current || nonFullscreenSrc) : nonFullscreenSrc;
