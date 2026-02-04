@@ -1282,7 +1282,9 @@ export default function VideoList({ onFullscreenChange }) {
                         key={selectedVideo.id}
                         src={(() => {
                           const transparent = spacing.isMobile ? 1 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1);
-                          const nonFullscreenSrc = `${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${transparent}`;
+                          // Mobile : charger en muted=1 (politique navigateur), on débloque le son au tap via setMuted(false)
+                          const mutedParam = spacing.isMobile ? 1 : 0;
+                          const nonFullscreenSrc = `${selectedVideo.url}?autoplay=0&loop=1&muted=${mutedParam}&controls=0&responsive=1&transparent=${transparent}&preload=metadata&quality=720p`;
                           if (!isFullscreen) iframeSrcRef.current = nonFullscreenSrc;
                           return isFullscreen ? (iframeSrcRef.current || nonFullscreenSrc) : nonFullscreenSrc;
                         })()}
