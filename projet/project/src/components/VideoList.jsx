@@ -1225,8 +1225,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile = noir (comme ancien code) ; desktop vidéos larges ou leftOffset sous seuil = noir ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                      // Même logique mobile/desktop : vidéos larges ou un peu moins larges = noir, moins larges = transparent ; fullscreen = noir
+                      backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1253,7 +1253,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                        backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1275,7 +1275,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (spacing.isMobile ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1))}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1)}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1465,13 +1465,11 @@ export default function VideoList({ onFullscreenChange }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: spacing.isMobile ? '1rem' : '0.5rem',
-                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
+                          justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          ...(spacing.isMobile
-                            ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
-                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
-                          ),
+                          left: `${visibleVideoDimensions.leftOffset}px`,
+                          width: visibleVideoDimensions.width,
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
