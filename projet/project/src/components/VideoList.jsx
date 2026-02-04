@@ -516,16 +516,18 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          // Mobile : unmute SANS await pour garder le contexte du geste (son dès le 1er clic)
+          // Mobile : unmute sans await pour garder le contexte du geste (son dès le 1er clic)
           playerRef.current.setMuted(false).catch(() => {});
           playerRef.current.setVolume(1).catch(() => {});
           setIsMuted(false);
-          // Play puis setIsPlaying(true) après succès (évite double clic)
-          await playerRef.current.play();
-          setIsPlaying(true);
-        } else {
-          await playerRef.current.play();
-          setIsPlaying(true);
+        }
+
+        // Play pour tout le monde (mobile + desktop)
+        await playerRef.current.play();
+        setIsPlaying(true);
+
+        // Desktop uniquement : activer le son après
+        if (!isMobileDevice) {
           await activateSoundOnMobile();
         }
 
