@@ -516,23 +516,13 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          // Mobile : unmute et play dans le même geste (sans await) pour que le navigateur autorise le son
-          if (playerRef.current) {
-            playerRef.current.setMuted(false).catch(() => {});
-            playerRef.current.setVolume(1).catch(() => {});
-            setIsMuted(false);
-          }
-          setIsPlaying(true); // Mise à jour immédiate de l’icône (play → pause)
-          playerRef.current.play()
-            .then(() => {
-              playerRef.current?.setMuted(false).catch(() => {});
-              playerRef.current?.setVolume(1).catch(() => {});
-              setIsMuted(false);
-            })
-            .catch((err) => {
-              console.error("Error controlling video:", err);
-              setIsPlaying(false);
-            });
+          // Mobile : unmute SANS await pour garder le contexte du geste (son dès le 1er clic)
+          playerRef.current.setMuted(false).catch(() => {});
+          playerRef.current.setVolume(1).catch(() => {});
+          setIsMuted(false);
+          // Play puis setIsPlaying(true) après succès (évite double clic)
+          await playerRef.current.play();
+          setIsPlaying(true);
         } else {
           await playerRef.current.play();
           setIsPlaying(true);
