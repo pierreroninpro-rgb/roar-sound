@@ -515,19 +515,20 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const isMobileDevice = window.innerWidth <= 820;
+
         if (isMobileDevice) {
-          // Mobile : unmute sans await pour garder le contexte du geste (son dès le 1er clic)
-          playerRef.current.setMuted(false).catch(() => {});
-          playerRef.current.setVolume(1).catch(() => {});
+          // Mobile : TOUT dans le même tick (play + unmute en parallèle, pas d'await entre geste et son)
+          const playPromise = playerRef.current.play();
+          const unmutePromise = playerRef.current.setMuted(false);
+          const volumePromise = playerRef.current.setVolume(1);
           setIsMuted(false);
-        }
-
-        // Play pour tout le monde (mobile + desktop)
-        await playerRef.current.play();
-        setIsPlaying(true);
-
-        // Desktop uniquement : activer le son après
-        if (!isMobileDevice) {
+          await playPromise;
+          setIsPlaying(true);
+          unmutePromise.catch(() => {});
+          volumePromise.catch(() => {});
+        } else {
+          await playerRef.current.play();
+          setIsPlaying(true);
           await activateSoundOnMobile();
         }
 
