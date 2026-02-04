@@ -514,17 +514,21 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          await activateSoundOnMobile();
-        }
-        
-        await playerRef.current.play();
-        setIsPlaying(true);
-        
-        // Si pas mobile, activer le son après
-        if (!isMobileDevice) {
+          // Mobile : unmute et play dans le même geste (sans await) pour que le navigateur autorise le son
+          if (playerRef.current) {
+            playerRef.current.setMuted(false).catch(() => {});
+            playerRef.current.setVolume(1).catch(() => {});
+            setIsMuted(false);
+          }
+          playerRef.current.play().then(() => setIsPlaying(true)).catch((err) => {
+            console.error("Error controlling video:", err);
+            setIsPlaying(false);
+          });
+        } else {
+          await playerRef.current.play();
+          setIsPlaying(true);
           await activateSoundOnMobile();
         }
 
