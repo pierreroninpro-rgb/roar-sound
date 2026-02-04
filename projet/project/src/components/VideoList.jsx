@@ -43,7 +43,6 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
-  const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom dynamique mobile pour que la vidéo remplisse le conteneur (videos larges)
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -486,42 +485,16 @@ export default function VideoList({ onFullscreenChange }) {
     setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
   };
 
-  const updateMobileCoverScale = () => {
-    const isMobile = window.innerWidth <= 500;
-    if (!isMobile || isFullscreen || !videoContainerRef.current || !(videoAspectRatio > 0)) {
-      setMobileCoverScale(1);
-      return;
-    }
-    const w = videoContainerRef.current.offsetWidth;
-    const h = videoContainerRef.current.offsetHeight;
-    if (w <= 0 || h <= 0) {
-      setMobileCoverScale(1);
-      return;
-    }
-    const containerRatio = w / h;
-    const videoRatio = videoAspectRatio;
-    // Zoom uniquement pour les vidéos les plus larges (bandes sur les côtés) : container plus large que le ratio vidéo
-    const scale = containerRatio > videoRatio ? containerRatio / videoRatio : 1;
-    setMobileCoverScale(scale);
-  };
-
-  // Recalculer les dimensions visibles et le zoom cover mobile quand le ratio ou la taille change
+  // Recalculer les dimensions visibles quand le ratio ou la taille change
   useEffect(() => {
     calculateVisibleVideoDimensions();
-    const rafId = requestAnimationFrame(() => {
-      updateMobileCoverScale();
-    });
 
     const handleResize = () => {
       calculateVisibleVideoDimensions();
-      updateMobileCoverScale();
     };
 
     window.addEventListener('resize', handleResize);
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
 
   const handlePlayPause = async () => {
@@ -1288,11 +1261,7 @@ export default function VideoList({ onFullscreenChange }) {
                           maxHeight: '100%',
                           aspectRatio: videoAspectRatio,
                           position: 'relative',
-                          flexShrink: 0,
-                          ...(spacing.isMobile && {
-                            transform: `scale(${mobileCoverScale})`,
-                            transformOrigin: 'center center'
-                          })
+                          flexShrink: 0
                         }),
                         ...(isFullscreen && {
                           width: '100%',
