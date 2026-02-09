@@ -1151,7 +1151,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      backgroundColor: '#000', // Noir partout : bandes letterbox noires (pas de bords blancs)
+                      // Mobile : transparent pour que le noir ne dépasse pas (uniquement la div interne = taille vidéo)
+                      backgroundColor: (spacing.isMobile && !isFullscreen) ? 'transparent' : '#000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
