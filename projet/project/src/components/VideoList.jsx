@@ -24,9 +24,6 @@ const REFERENCE_VALUES = {
   }
 };
 
-// Seuil (px) : si bandes sur les côtés <= ce nombre au total (leftOffset*2), on applique quand même le fond noir (vidéos "un peu moins larges")
-const LEFT_OFFSET_BLACK_THRESHOLD_PX = 60;
-
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -42,7 +39,6 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
-  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -59,7 +55,6 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
-  const iframeSrcRef = useRef(''); // Ref pour garder le même src en fullscreen et éviter le rechargement (pause sur vidéos "moins larges")
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -407,39 +402,19 @@ export default function VideoList({ onFullscreenChange }) {
           }
 
           // Détecter l'orientation de la vidéo via l'API Vimeo
-          let detectedRatio = 16 / 9;
           try {
             const videoWidth = await playerRef.current.getVideoWidth();
             const videoHeight = await playerRef.current.getVideoHeight();
             if (videoWidth && videoHeight) {
               const aspectRatio = videoWidth / videoHeight;
-              detectedRatio = aspectRatio;
               setVideoAspectRatio(aspectRatio);
               console.log(`Video aspect ratio detected: ${aspectRatio.toFixed(2)} (${videoWidth}x${videoHeight})`);
             }
           } catch (err) {
             console.error("Error getting video dimensions:", err);
+            // Par défaut, supposer format paysage (16:9)
             setVideoAspectRatio(16 / 9);
           }
-
-          // Recalculer la largeur visible pour la navbar (après un court délai pour que le DOM soit à jour)
-          requestAnimationFrame(() => {
-            if (videoContainerRef.current) {
-              const cw = videoContainerRef.current.offsetWidth;
-              const ch = videoContainerRef.current.offsetHeight;
-              const containerRatio = cw / ch;
-              const videoRatio = detectedRatio;
-              let visibleWidth, leftOffset;
-              if (containerRatio > videoRatio) {
-                visibleWidth = ch * videoRatio;
-                leftOffset = (cw - visibleWidth) / 2;
-              } else {
-                visibleWidth = cw;
-                leftOffset = 0;
-              }
-              setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
-            }
-          });
         }
       }, 100);
     }
@@ -460,44 +435,6 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  const calculateVisibleVideoDimensions = () => {
-    if (!videoContainerRef.current || isFullscreen) {
-      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
-      return;
-    }
-
-    const containerWidth = videoContainerRef.current.offsetWidth;
-    const containerHeight = videoContainerRef.current.offsetHeight;
-    const containerRatio = containerWidth / containerHeight;
-    const videoRatio = videoAspectRatio;
-
-    let visibleWidth, leftOffset;
-
-    if (containerRatio > videoRatio) {
-      // Container plus large que la vidéo -> bandes noires sur les côtés
-      visibleWidth = containerHeight * videoRatio;
-      leftOffset = (containerWidth - visibleWidth) / 2;
-    } else {
-      // Container plus haut que la vidéo ou ratio identique -> pas de bandes sur les côtés
-      visibleWidth = containerWidth;
-      leftOffset = 0;
-    }
-
-    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
-  };
-
-  // Recalculer les dimensions visibles quand le ratio ou la taille change
-  useEffect(() => {
-    calculateVisibleVideoDimensions();
-
-    const handleResize = () => {
-      calculateVisibleVideoDimensions();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
-
   const handlePlayPause = async () => {
     if (!playerRef.current) return;
 
@@ -514,21 +451,17 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
+        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
         const isMobileDevice = window.innerWidth <= 820;
-
         if (isMobileDevice) {
-          // Mobile : TOUT dans le même tick (play + unmute en parallèle, pas d'await entre geste et son)
-          const playPromise = playerRef.current.play();
-          const unmutePromise = playerRef.current.setMuted(false);
-          const volumePromise = playerRef.current.setVolume(1);
-          setIsMuted(false);
-          await playPromise;
-          setIsPlaying(true);
-          unmutePromise.catch(() => {});
-          volumePromise.catch(() => {});
-        } else {
-          await playerRef.current.play();
-          setIsPlaying(true);
+          await activateSoundOnMobile();
+        }
+        
+        await playerRef.current.play();
+        setIsPlaying(true);
+        
+        // Si pas mobile, activer le son après
+        if (!isMobileDevice) {
           await activateSoundOnMobile();
         }
 
@@ -601,8 +534,7 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop : capturer si on jouait avant fullscreen, puis reprendre après**
-        const shouldResumePlay = isPlaying;
+        // **Desktop : ton code actuel**
         const elementToFullscreen = document.documentElement;
 
         try {
@@ -642,17 +574,6 @@ export default function VideoList({ onFullscreenChange }) {
 
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
-
-        // Reprendre la lecture après passage en fullscreen (le navigateur peut mettre en pause)
-        if (shouldResumePlay && playerRef.current) {
-          setTimeout(() => {
-            if (playerRef.current) {
-              playerRef.current.play()
-                .then(() => setIsPlaying(true))
-                .catch((e) => console.log("Resume play error:", e));
-            }
-          }, 300);
-        }
 
         // Reste du code pour desktop (orientation lock, etc.)
         try {
@@ -1230,13 +1151,13 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile = noir (comme ancien code) ; desktop vidéos larges ou leftOffset sous seuil = noir ; fullscreen = noir
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                      backgroundColor: '#000', // Noir partout : bandes letterbox noires (pas de bords blancs)
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       zIndex: isFullscreen ? 2147483646 : undefined
                     }}
+                    onClick={handleVideoClick}
                     onMouseEnter={handleVideoMouseEnter}
                     onMouseLeave={handleVideoMouseLeave}
                     onMouseMove={(e) => {
@@ -1258,7 +1179,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent')),
+                        backgroundColor: '#000', // Bande noire si la vidéo a des bords blancs ou letterbox
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1280,14 +1201,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={(() => {
-                          const transparent = spacing.isMobile ? 1 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1);
-                          // Mobile : charger en muted=1 (politique navigateur), on débloque le son au tap via setMuted(false)
-                          const mutedParam = spacing.isMobile ? 1 : 0;
-                          const nonFullscreenSrc = `${selectedVideo.url}?autoplay=0&loop=1&muted=${mutedParam}&controls=0&responsive=1&transparent=${transparent}&preload=metadata&quality=720p`;
-                          if (!isFullscreen) iframeSrcRef.current = nonFullscreenSrc;
-                          return isFullscreen ? (iframeSrcRef.current || nonFullscreenSrc) : nonFullscreenSrc;
-                        })()}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=0`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1313,16 +1227,38 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay : plus de play/pause ici — seule la barre de lecture déclenche play/pause (évite double toggle) */}
+                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
                     <div
+                      onClick={async (e) => {
+                        // Ne pas capturer les clics sur les éléments interactifs
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
+                          return;
+                        }
+                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
+                        if (e.target === e.currentTarget) {
+                          e.preventDefault();
+                          await handlePlayPause();
+                        }
+                      }}
+                      onTouchStart={async (e) => {
+                        // Ne pas capturer les touches sur les éléments interactifs
+                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
+                          return;
+                        }
+                        if (e.target === e.currentTarget) {
+                          e.preventDefault();
+                          await handlePlayPause();
+                        }
+                      }}
                       style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        zIndex: 10,
-                        pointerEvents: 'none',
+                        zIndex: 10, // Au-dessus de l'iframe mais en-dessous des contrôles fullscreen
+                        pointerEvents: 'auto',
+                        cursor: 'pointer',
                         backgroundColor: 'transparent'
                       }}
                     />
@@ -1472,18 +1408,15 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: spacing.isMobile ? '0.1rem 1rem' : '0.1rem 0.75rem',
+                          padding: '0.1rem 1rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: spacing.isMobile ? '1rem' : '0.5rem',
-                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
+                          gap: '1rem',
                           position: 'absolute',
                           bottom: '4px',
-                          ...(spacing.isMobile
-                            ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
-                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
-                          ),
+                          left: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
+                          right: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
@@ -1500,7 +1433,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY - mobile = ancien code (style simple), desktop = taille fixe */}
+                        {/* Icône PAUSE/PLAY */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1512,37 +1445,26 @@ export default function VideoList({ onFullscreenChange }) {
                             e.preventDefault();
                             await handlePlayPause();
                           }}
-                          style={spacing.isMobile ? {
+                          style={{
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
-                          } : {
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            width: '20px',
-                            height: '20px'
                           }}
                         >
                           <img
                             src={isPlaying ? '/images/pause.png' : '/images/play.png'}
                             alt={isPlaying ? 'Pause' : 'Play'}
-                            style={spacing.isMobile ? { width: '20px', height: '20px' } : {
+                            style={{
                               width: '20px',
-                              height: '20px',
-                              objectFit: 'contain',
-                              flexShrink: 0
+                              height: '20px'
                             }}
                           />
                         </div>
 
-                        {/* Barre de progression - minWidth desktop uniquement (mobile = ancien code) */}
+                        {/* Barre de progression */}
                         <div
                           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                          style={spacing.isMobile ? undefined : { minWidth: '100px' }}
                           onClick={async (e) => {
                             if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
@@ -1573,30 +1495,28 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         </div>
 
-                        {/* Icône MUTE/UNMUTE - visible sur mobile (ancien code), masquée sur desktop */}
-                        {(spacing.isMobile) && (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleMute(e);
-                            }}
+                        {/* Icône MUTE/UNMUTE */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleMute(e);
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <img
+                            src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                            alt={isMuted ? 'Unmute' : 'Mute'}
                             style={{
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
+                              width: '36px',
+                              height: '36px'
                             }}
-                          >
-                            <img
-                              src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
-                              alt={isMuted ? 'Unmute' : 'Mute'}
-                              style={{
-                                width: '36px',
-                                height: '36px'
-                              }}
-                            />
-                          </div>
-                        )}
+                          />
+                        </div>
 
                         {/* Bouton Fullscreen - Masqué en plein écran mobile natif */}
                         {!(spacing.isMobile && isFullscreen) && (
