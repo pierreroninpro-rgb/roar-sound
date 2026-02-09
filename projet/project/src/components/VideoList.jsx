@@ -24,6 +24,9 @@ const REFERENCE_VALUES = {
   }
 };
 
+// Seuil (px) : vidéos larges ou un peu moins larges (leftOffset <= seuil) = fond noir ; moins larges = transparent
+const LEFT_OFFSET_BLACK_THRESHOLD_PX = 60;
+
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -39,6 +42,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
+  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 });
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -434,6 +438,33 @@ export default function VideoList({ onFullscreenChange }) {
   useEffect(() => {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
+
+  const calculateVisibleVideoDimensions = () => {
+    if (!videoContainerRef.current || isFullscreen) {
+      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
+      return;
+    }
+    const containerWidth = videoContainerRef.current.offsetWidth;
+    const containerHeight = videoContainerRef.current.offsetHeight;
+    const containerRatio = containerWidth / containerHeight;
+    const videoRatio = videoAspectRatio;
+    let visibleWidth, leftOffset;
+    if (containerRatio > videoRatio) {
+      visibleWidth = containerHeight * videoRatio;
+      leftOffset = (containerWidth - visibleWidth) / 2;
+    } else {
+      visibleWidth = containerWidth;
+      leftOffset = 0;
+    }
+    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+  };
+
+  useEffect(() => {
+    calculateVisibleVideoDimensions();
+    const handleResize = () => calculateVisibleVideoDimensions();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
 
   const handlePlayPause = async () => {
     if (!playerRef.current) return;
@@ -1151,8 +1182,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : transparent pour que le noir ne dépasse pas (uniquement la div interne = taille vidéo)
-                      backgroundColor: (spacing.isMobile && !isFullscreen) ? 'transparent' : '#000',
+                      // Fullscreen = noir ; mode normal = noir si vidéo large ou un peu moins large (leftOffset ≤ seuil), sinon transparent
+                      backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1180,8 +1211,8 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: '#000', // Bande noire si la vidéo a des bords blancs ou letterbox
-                        ...(spacing.isMobile && !isFullscreen && { zIndex: 0 }), // Mobile : sous la vidéo pour ne pas dépasser sur les côtés
+                        backgroundColor: isFullscreen ? '#000' : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? '#000' : 'transparent'),
+                        ...(spacing.isMobile && !isFullscreen && { zIndex: 0 }),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1203,7 +1234,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=0`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=${isFullscreen ? 0 : (visibleVideoDimensions.leftOffset <= LEFT_OFFSET_BLACK_THRESHOLD_PX ? 0 : 1)}`}
                         style={{
                           zIndex: (spacing.isMobile && !isFullscreen) ? 2 : 1, // Mobile : au-dessus du fond noir
                           pointerEvents: 'auto',
