@@ -451,17 +451,20 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
-        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          await activateSoundOnMobile();
-        }
-        
-        await playerRef.current.play();
-        setIsPlaying(true);
-        
-        // Si pas mobile, activer le son après
-        if (!isMobileDevice) {
+          // Mobile : play + unmute/volume en parallèle (même tick), un seul await sur play → meilleure réactivité
+          const playPromise = playerRef.current.play();
+          const unmutePromise = playerRef.current.setMuted(false);
+          const volumePromise = playerRef.current.setVolume(1);
+          setIsMuted(false);
+          await playPromise;
+          setIsPlaying(true);
+          unmutePromise.catch(() => {});
+          volumePromise.catch(() => {});
+        } else {
+          await playerRef.current.play();
+          setIsPlaying(true);
           await activateSoundOnMobile();
         }
 
