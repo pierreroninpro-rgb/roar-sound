@@ -435,15 +435,13 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  const handlePlayPause = async () => {
+  // Fonction centrale play/pause (une seule logique : bouton navbar, overlay, fullscreen, clavier)
+  const togglePlayPause = async () => {
     if (!playerRef.current) return;
 
-    // Afficher les contrôles
     setShowControls(true);
     setIsHovering(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
 
     try {
       if (isPlaying) {
@@ -452,9 +450,7 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const isMobileDevice = window.innerWidth <= 820;
-
         if (isMobileDevice) {
-          // Mobile : tout dans le MÊME geste utilisateur (aucun délai) pour que le navigateur accepte le son en 1 clic
           playerRef.current.setMuted(false).catch(() => {});
           playerRef.current.setVolume(1).catch(() => {});
           setIsMuted(false);
@@ -465,11 +461,8 @@ export default function VideoList({ onFullscreenChange }) {
           setIsPlaying(true);
           await activateSoundOnMobile();
         }
-
         controlsTimeoutRef.current = setTimeout(() => {
-          if (!isHovering) {
-            setShowControls(false);
-          }
+          if (!isHovering) setShowControls(false);
         }, 3000);
       }
     } catch (err) {
@@ -477,6 +470,8 @@ export default function VideoList({ onFullscreenChange }) {
       setIsPlaying(false);
     }
   };
+
+  const handlePlayPause = () => togglePlayPause();
 
 
   const handleFullscreen = async () => {
@@ -682,33 +677,7 @@ export default function VideoList({ onFullscreenChange }) {
         return;
       }
 
-      // Toggle play/pause
-      if (playerRef.current) {
-        setShowControls(true);
-        setIsHovering(true);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
-
-        try {
-          if (isPlaying) {
-            await playerRef.current.pause();
-            setIsPlaying(false);
-            setShowControls(true);
-          } else {
-            await playerRef.current.play();
-            setIsPlaying(true);
-            // Activer le son en mobile après l'interaction utilisateur
-            await activateSoundOnMobile();
-            controlsTimeoutRef.current = setTimeout(() => {
-              setIsHovering(false);
-              setShowControls(false);
-            }, 3000);
-          }
-        } catch (err) {
-          console.error("Error toggling play/pause:", err);
-        }
-      }
+      if (playerRef.current) await togglePlayPause();
     };
 
     // Gérer les mouvements de souris en mode plein écran
@@ -832,42 +801,7 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Gérer le clic sur l'écran pour play/pause
-  const handleVideoClick = async () => {
-    if (!playerRef.current) return;
-
-    // Afficher les contrôles au clic
-    setShowControls(true);
-    setIsHovering(true);
-
-    // Annuler le timeout précédent si il existe
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
-    try {
-      if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
-        // Si on met en pause, garder les contrôles visibles
-        setShowControls(true);
-      } else {
-        await playerRef.current.play();
-        setIsPlaying(true);
-        // Activer le son en mobile après l'interaction utilisateur
-        await activateSoundOnMobile();
-
-        // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
-        if (!isHovering) {
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false);
-          }, 3000);
-        }
-      }
-    } catch (err) {
-      console.error("Error toggling play/pause:", err);
-    }
-  };
+  const handleVideoClick = () => togglePlayPause();
 
   // Gérer le toggle du son
   const handleToggleMute = async (e) => {
