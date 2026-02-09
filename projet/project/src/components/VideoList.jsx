@@ -43,6 +43,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 });
+  const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom "cover" mobile pour vidéos larges (éviter barres noires)
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -461,7 +462,46 @@ export default function VideoList({ onFullscreenChange }) {
 
   useEffect(() => {
     calculateVisibleVideoDimensions();
-    const handleResize = () => calculateVisibleVideoDimensions();
+    // Zoom "cover" en mobile pour les vidéos les plus larges (conteneur plus large que le ratio → barres sur les côtés)
+    const isMobileWidth = typeof window !== 'undefined' && window.innerWidth <= 500;
+    if (isMobileWidth && !isFullscreen && videoContainerRef.current) {
+      const w = videoContainerRef.current.offsetWidth;
+      const h = videoContainerRef.current.offsetHeight;
+      if (h > 0) {
+        const containerRatio = w / h;
+        const videoRatio = videoAspectRatio;
+        if (containerRatio > videoRatio) {
+          setMobileCoverScale(containerRatio / videoRatio);
+        } else {
+          setMobileCoverScale(1);
+        }
+      } else {
+        setMobileCoverScale(1);
+      }
+    } else {
+      setMobileCoverScale(1);
+    }
+    const handleResize = () => {
+      calculateVisibleVideoDimensions();
+      const mobile = typeof window !== 'undefined' && window.innerWidth <= 500;
+      if (mobile && !isFullscreen && videoContainerRef.current) {
+        const w = videoContainerRef.current.offsetWidth;
+        const h = videoContainerRef.current.offsetHeight;
+        if (h > 0) {
+          const containerRatio = w / h;
+          const videoRatio = videoAspectRatio;
+          if (containerRatio > videoRatio) {
+            setMobileCoverScale(containerRatio / videoRatio);
+          } else {
+            setMobileCoverScale(1);
+          }
+        } else {
+          setMobileCoverScale(1);
+        }
+      } else {
+        setMobileCoverScale(1);
+      }
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
@@ -482,21 +522,17 @@ export default function VideoList({ onFullscreenChange }) {
         setIsPlaying(false);
         setShowControls(true);
       } else {
+        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          // Mobile : unmute et play dans le même geste (sans await) pour que le navigateur autorise le son
-          if (playerRef.current) {
-            playerRef.current.setMuted(false).catch(() => {});
-            playerRef.current.setVolume(1).catch(() => {});
-            setIsMuted(false);
-          }
-          playerRef.current.play().then(() => setIsPlaying(true)).catch((err) => {
-            console.error("Error controlling video:", err);
-            setIsPlaying(false);
-          });
-        } else {
-          await playerRef.current.play();
-          setIsPlaying(true);
+          await activateSoundOnMobile();
+        }
+        
+        await playerRef.current.play();
+        setIsPlaying(true);
+        
+        // Si pas mobile, activer le son après
+        if (!isMobileDevice) {
           await activateSoundOnMobile();
         }
 
@@ -1224,7 +1260,11 @@ export default function VideoList({ onFullscreenChange }) {
                           maxHeight: '100%',
                           aspectRatio: videoAspectRatio,
                           position: 'relative',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          ...(spacing.isMobile && mobileCoverScale > 1 && {
+                            transform: `scale(${mobileCoverScale})`,
+                            transformOrigin: 'center center'
+                          })
                         }),
                         ...(isFullscreen && {
                           width: '100%',
