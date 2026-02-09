@@ -55,7 +55,6 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
-  const isFirstPlayRef = useRef(true); // Premier play en mobile = double-clic automatique pour lancer avec le son
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -338,7 +337,6 @@ export default function VideoList({ onFullscreenChange }) {
       // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
       progressRef.current = 0;
-      isFirstPlayRef.current = true; // Réinitialiser pour que le premier play de cette vidéo vaille deux clics (mobile)
 
       if (playerRef.current) {
         try {
@@ -454,27 +452,15 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const isMobileDevice = window.innerWidth <= 820;
-        const mobileClassicView = isMobileDevice && !isFullscreen; // Uniquement vue normale mobile (pas fullscreen)
 
-        if (mobileClassicView && isFirstPlayRef.current) {
-          // Premier clic play en vue normale mobile : 1 tap = 2 actions espacées de 75 ms (préparation puis play avec son)
-          isFirstPlayRef.current = false;
-          setIsMuted(false);
+        if (isMobileDevice) {
+          // Mobile : tout dans le MÊME geste utilisateur (aucun délai) pour que le navigateur accepte le son en 1 clic
           playerRef.current.setMuted(false).catch(() => {});
           playerRef.current.setVolume(1).catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 75));
-          await playerRef.current.play();
-          setIsPlaying(true);
-        } else if (mobileClassicView) {
-          // Clics suivants en vue normale mobile : comportement normal
-          setIsPlaying(true);
           setIsMuted(false);
-          playerRef.current.setMuted(false).catch(() => {});
-          playerRef.current.setVolume(1).catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 50));
           await playerRef.current.play();
+          setIsPlaying(true);
         } else {
-          // Desktop ou fullscreen : logique normale
           await playerRef.current.play();
           setIsPlaying(true);
           await activateSoundOnMobile();
