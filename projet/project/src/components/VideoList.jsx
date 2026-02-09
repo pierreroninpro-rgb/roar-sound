@@ -1181,6 +1181,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: '#000', // Bande noire si la vidéo a des bords blancs ou letterbox
+                        ...(spacing.isMobile && !isFullscreen && { zIndex: 0 }), // Mobile : sous la vidéo pour ne pas dépasser sur les côtés
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1204,7 +1205,7 @@ export default function VideoList({ onFullscreenChange }) {
                         key={selectedVideo.id}
                         src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=0`}
                         style={{
-                          zIndex: 1,
+                          zIndex: (spacing.isMobile && !isFullscreen) ? 2 : 1, // Mobile : au-dessus du fond noir
                           pointerEvents: 'auto',
                           cursor: 'pointer',
                           ...(!isFullscreen && {
