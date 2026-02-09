@@ -454,17 +454,19 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice && isFirstPlayRef.current) {
-          // Premier clic mobile : double-clic automatique (préparation son puis play)
+        const mobileClassicView = isMobileDevice && !isFullscreen; // Uniquement vue normale mobile (pas fullscreen)
+
+        if (mobileClassicView && isFirstPlayRef.current) {
+          // Premier clic play en vue normale mobile : 1 tap = 2 actions espacées de 75 ms (préparation puis play avec son)
           isFirstPlayRef.current = false;
           setIsMuted(false);
           playerRef.current.setMuted(false).catch(() => {});
           playerRef.current.setVolume(1).catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 75));
           await playerRef.current.play();
           setIsPlaying(true);
-        } else if (isMobileDevice) {
-          // Clics suivants en mobile : logique optimisée
+        } else if (mobileClassicView) {
+          // Clics suivants en vue normale mobile : comportement normal
           setIsPlaying(true);
           setIsMuted(false);
           playerRef.current.setMuted(false).catch(() => {});
@@ -472,7 +474,7 @@ export default function VideoList({ onFullscreenChange }) {
           await new Promise(resolve => setTimeout(resolve, 50));
           await playerRef.current.play();
         } else {
-          // Desktop
+          // Desktop ou fullscreen : logique normale
           await playerRef.current.play();
           setIsPlaying(true);
           await activateSoundOnMobile();
