@@ -453,15 +453,13 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          // Mobile : play + unmute/volume en parallèle (même tick), un seul await sur play → meilleure réactivité
-          const playPromise = playerRef.current.play();
-          const unmutePromise = playerRef.current.setMuted(false);
-          const volumePromise = playerRef.current.setVolume(1);
-          setIsMuted(false);
-          await playPromise;
+          // Mobile : séquence optimisée pour éviter le chargement infini au premier clic
           setIsPlaying(true);
-          unmutePromise.catch(() => {});
-          volumePromise.catch(() => {});
+          setIsMuted(false);
+          playerRef.current.setMuted(false).catch(() => {});
+          playerRef.current.setVolume(1).catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 50));
+          await playerRef.current.play();
         } else {
           await playerRef.current.play();
           setIsPlaying(true);
