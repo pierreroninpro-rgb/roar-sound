@@ -55,6 +55,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
+  const isFirstPlayRef = useRef(true); // Premier play en mobile = double-clic automatique pour lancer avec le son
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -337,6 +338,7 @@ export default function VideoList({ onFullscreenChange }) {
       // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
       progressRef.current = 0;
+      isFirstPlayRef.current = true; // Réinitialiser pour que le premier play de cette vidéo vaille deux clics (mobile)
 
       if (playerRef.current) {
         try {
@@ -452,8 +454,17 @@ export default function VideoList({ onFullscreenChange }) {
         setShowControls(true);
       } else {
         const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          // Mobile : séquence optimisée pour éviter le chargement infini au premier clic
+        if (isMobileDevice && isFirstPlayRef.current) {
+          // Premier clic mobile : double-clic automatique (préparation son puis play)
+          isFirstPlayRef.current = false;
+          setIsMuted(false);
+          playerRef.current.setMuted(false).catch(() => {});
+          playerRef.current.setVolume(1).catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await playerRef.current.play();
+          setIsPlaying(true);
+        } else if (isMobileDevice) {
+          // Clics suivants en mobile : logique optimisée
           setIsPlaying(true);
           setIsMuted(false);
           playerRef.current.setMuted(false).catch(() => {});
@@ -461,6 +472,7 @@ export default function VideoList({ onFullscreenChange }) {
           await new Promise(resolve => setTimeout(resolve, 50));
           await playerRef.current.play();
         } else {
+          // Desktop
           await playerRef.current.play();
           setIsPlaying(true);
           await activateSoundOnMobile();
