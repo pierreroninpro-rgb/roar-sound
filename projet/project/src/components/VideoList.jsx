@@ -1097,7 +1097,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1${(spacing.isMobile && !isFullscreen) ? '&controls=1' : '&controls=0'}`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1123,16 +1123,16 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay : capture clic/touch pour play/pause (navbar et bouton central exclus) */}
+                    {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l’interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
                     <div
-                      onClick={async (e) => {
+                      onClick={(spacing.isMobile && !isFullscreen) ? undefined : async (e) => {
                         if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
-                      onTouchStart={async (e) => {
+                      onTouchStart={(spacing.isMobile && !isFullscreen) ? undefined : async (e) => {
                         if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
@@ -1146,14 +1146,14 @@ export default function VideoList({ onFullscreenChange }) {
                         right: 0,
                         bottom: 0,
                         zIndex: 10,
-                        pointerEvents: 'auto',
-                        cursor: 'pointer',
+                        pointerEvents: (spacing.isMobile && !isFullscreen) ? 'none' : 'auto',
+                        cursor: (spacing.isMobile && !isFullscreen) ? 'default' : 'pointer',
                         backgroundColor: 'transparent'
                       }}
                     />
 
-                    {/* Bouton play central (nos images) : visible sur mobile quand la vidéo est en pause */}
-                    {spacing.isMobile && !isFullscreen && !isPlaying && (
+                    {/* Bouton play central (nos images) : desktop uniquement, quand la vidéo est en pause */}
+                    {!spacing.isMobile && !isFullscreen && !isPlaying && (
                       <div
                         data-center-play
                         role="button"
@@ -1328,11 +1328,11 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
 
-                    {/* Navbar en bas - Mode normal */}
-                    {!isFullscreen && (
+                    {/* Navbar en bas - Mode normal (desktop uniquement ; sur mobile on affiche l’interface Vimeo) */}
+                    {!isFullscreen && !spacing.isMobile && (
                       <div
                         data-navbar
-                        className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
+                        className={`${(showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: '0.1rem 1rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
