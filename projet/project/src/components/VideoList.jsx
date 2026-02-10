@@ -582,6 +582,28 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
+        // Firefox a besoin d’un court délai pour finaliser le plein écran avant qu’on calcule les dimensions (évite la barre noire en haut)
+        const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+        await new Promise((r) => setTimeout(r, isFirefox ? 150 : 50));
+
+        // Dimensions AVANT setIsFullscreen pour que le 1er rendu fullscreen ait déjà les bonnes dimensions
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const aspectRatio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
+
+        let iframeWidth, iframeHeight;
+        if (screenWidth / screenHeight > aspectRatio) {
+          iframeHeight = screenHeight;
+          iframeWidth = screenHeight * aspectRatio;
+        } else {
+          iframeWidth = screenWidth;
+          iframeHeight = screenWidth / aspectRatio;
+        }
+        setFullscreenVideoDimensions({
+          width: `${iframeWidth}px`,
+          height: `${iframeHeight}px`
+        });
+
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
 
@@ -590,25 +612,6 @@ export default function VideoList({ onFullscreenChange }) {
         } catch (orientationErr) {
           console.log("Screen Orientation API not available:", orientationErr);
         }
-
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatio;
-
-        let iframeWidth, iframeHeight;
-
-        if (screenWidth / screenHeight > aspectRatio) {
-          iframeHeight = screenHeight;
-          iframeWidth = screenHeight * aspectRatio;
-        } else {
-          iframeWidth = screenWidth;
-          iframeHeight = screenWidth / aspectRatio;
-        }
-
-        setFullscreenVideoDimensions({
-          width: `${iframeWidth}px`,
-          height: `${iframeHeight}px`
-        });
       }
     } catch (err) {
       console.error("Error toggling fullscreen:", err);
@@ -636,7 +639,7 @@ export default function VideoList({ onFullscreenChange }) {
         setIsHovering(true);
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatioRef.current;
+        const aspectRatio = videoAspectRatioRef.current || 16 / 9;
 
         let iframeWidth, iframeHeight;
 
