@@ -582,23 +582,6 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // Calculer les dimensions tout de suite après passage en fullscreen (évite décalage navbar/vidéo sur Firefox)
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatio;
-        let iframeWidth, iframeHeight;
-        if (screenWidth / screenHeight > aspectRatio) {
-          iframeHeight = screenHeight;
-          iframeWidth = screenHeight * aspectRatio;
-        } else {
-          iframeWidth = screenWidth;
-          iframeHeight = screenWidth / aspectRatio;
-        }
-        setFullscreenVideoDimensions({
-          width: `${iframeWidth}px`,
-          height: `${iframeHeight}px`
-        });
-
         setIsFullscreen(true);
         if (onFullscreenChange) onFullscreenChange(true);
 
@@ -607,6 +590,25 @@ export default function VideoList({ onFullscreenChange }) {
         } catch (orientationErr) {
           console.log("Screen Orientation API not available:", orientationErr);
         }
+
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const aspectRatio = videoAspectRatio;
+
+        let iframeWidth, iframeHeight;
+
+        if (screenWidth / screenHeight > aspectRatio) {
+          iframeHeight = screenHeight;
+          iframeWidth = screenHeight * aspectRatio;
+        } else {
+          iframeWidth = screenWidth;
+          iframeHeight = screenWidth / aspectRatio;
+        }
+
+        setFullscreenVideoDimensions({
+          width: `${iframeWidth}px`,
+          height: `${iframeHeight}px`
+        });
       }
     } catch (err) {
       console.error("Error toggling fullscreen:", err);
@@ -632,27 +634,24 @@ export default function VideoList({ onFullscreenChange }) {
       if (isCurrentlyFullscreen && isOurFullscreen) {
         setShowControls(true);
         setIsHovering(true);
-        const applyFullscreenDimensions = () => {
-          const screenWidth = window.innerWidth;
-          const screenHeight = window.innerHeight;
-          const aspectRatio = videoAspectRatioRef.current || 16 / 9;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const aspectRatio = videoAspectRatioRef.current;
 
-          let iframeWidth, iframeHeight;
-          if (screenWidth / screenHeight > aspectRatio) {
-            iframeHeight = screenHeight;
-            iframeWidth = screenHeight * aspectRatio;
-          } else {
-            iframeWidth = screenWidth;
-            iframeHeight = screenWidth / aspectRatio;
-          }
+        let iframeWidth, iframeHeight;
 
-          setFullscreenVideoDimensions({
-            width: `${iframeWidth}px`,
-            height: `${iframeHeight}px`
-          });
-        };
-        applyFullscreenDimensions();
-        requestAnimationFrame(applyFullscreenDimensions);
+        if (screenWidth / screenHeight > aspectRatio) {
+          iframeHeight = screenHeight;
+          iframeWidth = screenHeight * aspectRatio;
+        } else {
+          iframeWidth = screenWidth;
+          iframeHeight = screenWidth / aspectRatio;
+        }
+
+        setFullscreenVideoDimensions({
+          width: `${iframeWidth}px`,
+          height: `${iframeHeight}px`
+        });
       }
     };
 
