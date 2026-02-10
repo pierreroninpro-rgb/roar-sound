@@ -56,7 +56,6 @@ export default function VideoList({ onFullscreenChange }) {
   const progressRef = useRef(0); // Miroir de progress pour init lastDrag au drag start
   const didDragMoveRef = useRef(false); // true si on a bougé pendant le drag (évite seek inutile)
   const videoAspectRatioRef = useRef(16 / 9); // Ref pour accès au ratio dans les listeners fullscreen
-  const [containerAspectRatio, setContainerAspectRatio] = useState(null); // Mobile : ratio du conteneur vidéo pour "cover" des vidéos larges
 
   // État pour les dimensions (marges fixes, vidéo proportionnelle)
   const [spacing, setSpacing] = useState({
@@ -443,22 +442,6 @@ export default function VideoList({ onFullscreenChange }) {
   useEffect(() => {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
-
-  // Mobile : ratio du conteneur vidéo (pour que les vidéos les plus larges remplissent 100 % — Chrome, Ecosia, etc.)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const updateContainerRatio = () => {
-      if (window.innerWidth <= 820 && spacing.videoHeightPercent) {
-        const h = window.innerHeight * spacing.videoHeightPercent;
-        setContainerAspectRatio(h > 0 ? window.innerWidth / h : null);
-      } else {
-        setContainerAspectRatio(null);
-      }
-    };
-    updateContainerRatio();
-    window.addEventListener('resize', updateContainerRatio);
-    return () => window.removeEventListener('resize', updateContainerRatio);
-  }, [spacing.videoHeightPercent]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
@@ -1112,7 +1095,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
-                        ...(!isFullscreen && !(spacing.isMobile && !isFullscreen && videoAspectRatio >= 1.9 && containerAspectRatio) && {
+                        ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
                           height: 'auto',
@@ -1120,13 +1103,6 @@ export default function VideoList({ onFullscreenChange }) {
                           aspectRatio: videoAspectRatio,
                           position: 'relative',
                           flexShrink: 0
-                        }),
-                        ...(spacing.isMobile && !isFullscreen && videoAspectRatio >= 1.9 && containerAspectRatio && {
-                          position: 'absolute',
-                          inset: 0,
-                          width: '100%',
-                          height: '100%',
-                          overflow: 'hidden'
                         }),
                         ...(isFullscreen && {
                           width: '100%',
@@ -1145,25 +1121,13 @@ export default function VideoList({ onFullscreenChange }) {
                           zIndex: 1,
                           pointerEvents: 'auto',
                           cursor: 'pointer',
-                          ...(!isFullscreen && !(spacing.isMobile && videoAspectRatio >= 1.9 && containerAspectRatio) && {
+                          ...(!isFullscreen && {
                             position: 'absolute',
                             top: 0,
                             left: 0,
                             width: '100%',
                             height: '100%'
                           }),
-                          ...(!isFullscreen && spacing.isMobile && videoAspectRatio >= 1.9 && containerAspectRatio && (() => {
-                            const coverScale = Math.max(videoAspectRatio / containerAspectRatio, containerAspectRatio / videoAspectRatio);
-                            return {
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              width: '100%',
-                              height: '100%',
-                              transform: `translate(-50%, -50%) scale(${coverScale})`,
-                              transformOrigin: 'center center'
-                            };
-                          })()),
                           ...(isFullscreen && {
                             width: fullscreenVideoDimensions.width,
                             height: fullscreenVideoDimensions.height,
