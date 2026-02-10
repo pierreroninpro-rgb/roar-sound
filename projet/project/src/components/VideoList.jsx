@@ -337,6 +337,7 @@ export default function VideoList({ onFullscreenChange }) {
     if (videoRef.current && selectedVideo) {
       setProgress(0);
       progressRef.current = 0;
+      setVideoAspectRatio(16 / 9);
 
       if (playerRef.current) {
         try {
@@ -407,19 +408,24 @@ export default function VideoList({ onFullscreenChange }) {
               const volume = await playerRef.current.getVolume();
               setIsMuted(muted || volume === 0);
             } catch (_) {}
+            try {
+              const videoWidth = await playerRef.current.getVideoWidth();
+              const videoHeight = await playerRef.current.getVideoHeight();
+              if (videoWidth && videoHeight) {
+                setVideoAspectRatio(videoWidth / videoHeight);
+              }
+            } catch (_) {
+              setVideoAspectRatio(16 / 9);
+            }
           });
 
-          // Détecter le ratio vidéo
           try {
             const videoWidth = await playerRef.current.getVideoWidth();
             const videoHeight = await playerRef.current.getVideoHeight();
             if (videoWidth && videoHeight) {
-              const aspectRatio = videoWidth / videoHeight;
-              setVideoAspectRatio(aspectRatio);
+              setVideoAspectRatio(videoWidth / videoHeight);
             }
-          } catch (err) {
-            setVideoAspectRatio(16 / 9);
-          }
+          } catch (_) {}
 
           setIsPlaying(false);
           setShowControls(true);
@@ -626,25 +632,27 @@ export default function VideoList({ onFullscreenChange }) {
       if (isCurrentlyFullscreen && isOurFullscreen) {
         setShowControls(true);
         setIsHovering(true);
-        // Calculer les dimensions pour letterboxing (ratio de la vidéo, via ref pour valeur à jour)
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatioRef.current;
+        const applyFullscreenDimensions = () => {
+          const screenWidth = window.innerWidth;
+          const screenHeight = window.innerHeight;
+          const aspectRatio = videoAspectRatioRef.current || 16 / 9;
 
-        let iframeWidth, iframeHeight;
+          let iframeWidth, iframeHeight;
+          if (screenWidth / screenHeight > aspectRatio) {
+            iframeHeight = screenHeight;
+            iframeWidth = screenHeight * aspectRatio;
+          } else {
+            iframeWidth = screenWidth;
+            iframeHeight = screenWidth / aspectRatio;
+          }
 
-        if (screenWidth / screenHeight > aspectRatio) {
-          iframeHeight = screenHeight;
-          iframeWidth = screenHeight * aspectRatio;
-        } else {
-          iframeWidth = screenWidth;
-          iframeHeight = screenWidth / aspectRatio;
-        }
-
-        setFullscreenVideoDimensions({
-          width: `${iframeWidth}px`,
-          height: `${iframeHeight}px`
-        });
+          setFullscreenVideoDimensions({
+            width: `${iframeWidth}px`,
+            height: `${iframeHeight}px`
+          });
+        };
+        applyFullscreenDimensions();
+        requestAnimationFrame(applyFullscreenDimensions);
       }
     };
 
