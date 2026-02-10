@@ -395,14 +395,8 @@ export default function VideoList({ onFullscreenChange }) {
 
           // ——— Config initiale : mobile = préparer le son au chargement ———
           playerRef.current.on("loaded", async () => {
-            if (window.innerWidth <= 820) {
-              try {
-                await playerRef.current.setVolume(1);
-                await playerRef.current.setMuted(false);
-              } catch (err) {
-                console.log("Could not prepare audio on load:", err);
-              }
-            }
+            // Sur mobile : NE PAS activer le son au chargement (ça ne fonctionne pas)
+            // Le son sera activé au premier tap de l'utilisateur via togglePlayPause
             try {
               const muted = await playerRef.current.getMuted();
               const volume = await playerRef.current.getVolume();
@@ -450,7 +444,7 @@ export default function VideoList({ onFullscreenChange }) {
   }, [videoAspectRatio]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
-  // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
+  // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute AVANT play() pour le son.
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
@@ -463,14 +457,12 @@ export default function VideoList({ onFullscreenChange }) {
         if (isPlaying) {
           await playerRef.current.pause();
         } else {
+          // CRITIQUE : Unmute AVANT play() pour que le son soit activé dès le premier tap
+          // On fait ces deux appels SANS await pour qu'ils restent dans le même "geste utilisateur"
+          playerRef.current.setVolume(1).catch(() => {});
+          playerRef.current.setMuted(false).catch(() => {});
+          // Maintenant on lance le play (toujours dans le même geste utilisateur)
           await playerRef.current.play();
-          // 50ms après le play : activer le son.
-          setTimeout(() => {
-            if (playerRef.current) {
-              playerRef.current.setVolume(1);
-              playerRef.current.setMuted(false);
-            }
-          }, 50);
         }
       } else {
         const paused = await playerRef.current.getPaused();
@@ -1116,7 +1108,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0&autopause=0&playsinline=1`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
