@@ -331,10 +331,9 @@ export default function VideoList({ onFullscreenChange }) {
     fetchVideos();
   }, []);
 
-  // Initialize Vimeo Player when video changes
+  // Initialize Vimeo Player when video changes — Vimeo = source de vérité, on écoute les événements
   useEffect(() => {
     if (videoRef.current && selectedVideo) {
-      // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
       progressRef.current = 0;
 
@@ -349,24 +348,27 @@ export default function VideoList({ onFullscreenChange }) {
       setTimeout(async () => {
         if (videoRef.current) {
           playerRef.current = new Player(videoRef.current);
-          setIsPlaying(false);
 
-          // Mobile : préparer le son dès le chargement (un seul clic pour play + son)
-          playerRef.current.on("loaded", async () => {
-            if (window.innerWidth <= 820) {
-              try {
-                await playerRef.current.setVolume(1);
-                await playerRef.current.setMuted(false);
-                setIsMuted(false);
-              } catch (err) {
-                console.log("Could not prepare audio on load:", err);
-              }
+          // ——— Événements Vimeo : on met à jour l'UI uniquement ———
+          playerRef.current.on("play", () => {
+            setIsPlaying(true);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            if (window.innerWidth > 820) {
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+              }, 3000);
             }
           });
-
-          // Listen to timeupdate events for progress
+          playerRef.current.on("pause", () => {
+            setIsPlaying(false);
+            setShowControls(true);
+          });
+          playerRef.current.on("ended", () => {
+            setIsPlaying(false);
+            setShowControls(true);
+          });
           playerRef.current.on("timeupdate", async (data) => {
-            if (isDraggingProgress.current) return; // Pendant le drag : on garde la position locale, pas de saccade
+            if (isDraggingProgress.current) return;
             try {
               const duration = await playerRef.current.getDuration();
               if (duration && duration > 0) {
@@ -379,55 +381,47 @@ export default function VideoList({ onFullscreenChange }) {
               console.error("Error updating progress:", err);
             }
           });
-
-          // Listen to play/pause events
-          playerRef.current.on("play", () => {
-            setIsPlaying(true);
-            // Masquer les contrôles après 3 secondes seulement si on ne survole pas
-            if (controlsTimeoutRef.current) {
-              clearTimeout(controlsTimeoutRef.current);
-            }
-            if (!isHovering) {
-              controlsTimeoutRef.current = setTimeout(() => {
-                if (!isHovering) {
-                  setShowControls(false);
-                }
-              }, 3000);
+          playerRef.current.on("volumechange", async () => {
+            try {
+              const muted = await playerRef.current.getMuted();
+              const volume = await playerRef.current.getVolume();
+              setIsMuted(muted || volume === 0);
+            } catch (err) {
+              console.error("Error getting volume:", err);
             }
           });
-          playerRef.current.on("pause", () => {
-            setIsPlaying(false);
-            // Garder les contrôles visibles quand on pause
-            setShowControls(true);
-          });
-          playerRef.current.on("ended", () => {
-            setIsPlaying(false); // Réafficher le bouton play quand la vidéo est finie
-            setShowControls(true); // Afficher les contrôles à la fin
+
+          // ——— Config initiale : mobile = préparer le son au chargement ———
+          playerRef.current.on("loaded", async () => {
+            if (window.innerWidth <= 820) {
+              try {
+                await playerRef.current.setVolume(1);
+                await playerRef.current.setMuted(false);
+              } catch (err) {
+                console.log("Could not prepare audio on load:", err);
+              }
+            }
+            try {
+              const muted = await playerRef.current.getMuted();
+              const volume = await playerRef.current.getVolume();
+              setIsMuted(muted || volume === 0);
+            } catch (_) {}
           });
 
-          // Vérifier l'état initial du volume
-          try {
-            const volume = await playerRef.current.getVolume();
-            const muted = await playerRef.current.getMuted();
-            setIsMuted(muted || volume === 0);
-          } catch (err) {
-            console.error("Error getting volume:", err);
-          }
-
-          // Détecter l'orientation de la vidéo via l'API Vimeo
+          // Détecter le ratio vidéo
           try {
             const videoWidth = await playerRef.current.getVideoWidth();
             const videoHeight = await playerRef.current.getVideoHeight();
             if (videoWidth && videoHeight) {
               const aspectRatio = videoWidth / videoHeight;
               setVideoAspectRatio(aspectRatio);
-              console.log(`Video aspect ratio detected: ${aspectRatio.toFixed(2)} (${videoWidth}x${videoHeight})`);
             }
           } catch (err) {
-            console.error("Error getting video dimensions:", err);
-            // Par défaut, supposer format paysage (16:9)
             setVideoAspectRatio(16 / 9);
           }
+
+          setIsPlaying(false);
+          setShowControls(true);
         }
       }, 100);
     }
@@ -448,37 +442,21 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  // Fonction centrale play/pause (une seule logique : bouton navbar, overlay, fullscreen, clavier)
+  // Une seule fonction : demander à Vimeo de play ou pause ; les événements play/pause mettent à jour l'UI
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
-
     setShowControls(true);
     setIsHovering(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-
     try {
-      if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
-        setShowControls(true);
+      const paused = await playerRef.current.getPaused();
+      if (paused) {
+        await playerRef.current.play();
       } else {
-        const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          // Mobile : son déjà préparé par on("loaded"), juste play
-          await playerRef.current.play();
-          setIsPlaying(true);
-        } else {
-          await playerRef.current.play();
-          setIsPlaying(true);
-          await activateSoundOnMobile();
-        }
-        controlsTimeoutRef.current = setTimeout(() => {
-          if (!isHovering) setShowControls(false);
-        }, 3000);
+        await playerRef.current.pause();
       }
     } catch (err) {
-      console.error("Error controlling video:", err);
-      setIsPlaying(false);
+      console.error("Error toggling play/pause:", err);
     }
   };
 
@@ -798,45 +776,16 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Fonction helper pour activer le son en mobile après une interaction utilisateur
-  const activateSoundOnMobile = async () => {
-    const isMobileDevice = window.innerWidth <= 820;
-    if (isMobileDevice && playerRef.current) {
-      try {
-        await playerRef.current.setMuted(false);
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } catch (err) {
-        console.error("Error unmuting video:", err);
-      }
-    }
-  };
-
   const handleVideoClick = () => togglePlayPause();
 
-  // Gérer le toggle du son
   const handleToggleMute = async (e) => {
     e?.stopPropagation();
     if (!playerRef.current) return;
-
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     try {
-      if (isMuted) {
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } else {
-        await playerRef.current.setVolume(0);
-        setIsMuted(true);
-      }
-      // Réafficher les contrôles quand on change le son
-      setShowControls(true);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-      if (isPlaying) {
-        controlsTimeoutRef.current = setTimeout(() => {
-          setShowControls(false);
-        }, 3000);
-      }
+      const currentlyMuted = await playerRef.current.getMuted();
+      await playerRef.current.setMuted(!currentlyMuted);
     } catch (err) {
       console.error("Error toggling mute:", err);
     }
