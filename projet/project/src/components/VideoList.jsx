@@ -444,7 +444,7 @@ export default function VideoList({ onFullscreenChange }) {
   }, [videoAspectRatio]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
-  // Sur mobile : court délai (100ms) pour laisser React/Vimeo se synchroniser, puis getPaused() pour être en phase avec le player. Après play(), unmute 50ms plus tard pour activer le son.
+  // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
@@ -453,20 +453,18 @@ export default function VideoList({ onFullscreenChange }) {
     const isMobileDevice = window.innerWidth <= 820;
     try {
       if (isMobileDevice) {
-        // Délai court pour laisser les events Vimeo (play/pause) mettre à jour l'état avant de décider.
-        await new Promise((r) => setTimeout(r, 100));
-        const paused = await playerRef.current.getPaused();
-        if (paused) {
+        // Mobile : décision immédiate sur isPlaying (pas d'await getPaused) pour que play() reste dans le même geste que le tap → 1 tap suffit.
+        if (isPlaying) {
+          await playerRef.current.pause();
+        } else {
           await playerRef.current.play();
-          // 50ms après le play : activer le son (effet "mini bouton invisible" pour débloquer l'audio).
+          // 50ms après le play : activer le son.
           setTimeout(() => {
             if (playerRef.current) {
               playerRef.current.setVolume(1);
               playerRef.current.setMuted(false);
             }
           }, 50);
-        } else {
-          await playerRef.current.pause();
         }
       } else {
         const paused = await playerRef.current.getPaused();
@@ -1148,19 +1146,21 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       onClick={async (e) => {
                         if (e.target.closest('[data-navbar]')) return;
-                        if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return; // mobile uniquement : évite double fire touch+click
-                        if (e.target === e.currentTarget) {
+                        if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                        const onMobile = window.innerWidth <= 820;
+                        if (onMobile || e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
                       onTouchEnd={async (e) => {
                         if (e.target.closest('[data-navbar]')) return;
-                        if (e.target !== e.currentTarget) return;
+                        const onMobile = window.innerWidth <= 820;
+                        if (!onMobile && e.target !== e.currentTarget) return;
                         e.preventDefault();
-                        if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                        if (onMobile) playPauseHandledByTouchRef.current = true;
                         await handlePlayPause();
-                        if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
+                        if (onMobile) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
                       }}
                       style={{
                         position: 'absolute',
