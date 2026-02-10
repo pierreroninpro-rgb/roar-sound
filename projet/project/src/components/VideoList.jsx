@@ -442,18 +442,32 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  // Une seule fonction : demander à Vimeo de play ou pause ; les événements play/pause mettent à jour l'UI
+  // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
+  // Sur mobile : play + setVolume(1) + setMuted(false) dans le même geste utilisateur pour que le navigateur autorise le son.
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
     setIsHovering(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    const isMobileDevice = window.innerWidth <= 820;
     try {
-      const paused = await playerRef.current.getPaused();
-      if (paused) {
-        await playerRef.current.play();
+      if (isMobileDevice) {
+        // Mobile : on se base sur l'état React (pas d'await getPaused) pour garder le geste utilisateur.
+        if (isPlaying) {
+          await playerRef.current.pause();
+        } else {
+          // Lancer le son + play dans le même geste (requis par Safari/Chrome pour autoriser le son).
+          playerRef.current.setVolume(1);
+          playerRef.current.setMuted(false);
+          await playerRef.current.play();
+        }
       } else {
-        await playerRef.current.pause();
+        const paused = await playerRef.current.getPaused();
+        if (paused) {
+          await playerRef.current.play();
+        } else {
+          await playerRef.current.pause();
+        }
       }
     } catch (err) {
       console.error("Error toggling play/pause:", err);
@@ -1097,7 +1111,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1${(spacing.isMobile && !isFullscreen) ? '&controls=1' : '&controls=0'}`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1125,15 +1139,15 @@ export default function VideoList({ onFullscreenChange }) {
                     </div>
                     {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l’interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
                     <div
-                      onClick={(spacing.isMobile && !isFullscreen) ? undefined : async (e) => {
-                        if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
+                      onClick={async (e) => {
+                        if (e.target.closest('[data-navbar]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
-                      onTouchStart={(spacing.isMobile && !isFullscreen) ? undefined : async (e) => {
-                        if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
+                      onTouchStart={async (e) => {
+                        if (e.target.closest('[data-navbar]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
@@ -1146,48 +1160,11 @@ export default function VideoList({ onFullscreenChange }) {
                         right: 0,
                         bottom: 0,
                         zIndex: 10,
-                        pointerEvents: (spacing.isMobile && !isFullscreen) ? 'none' : 'auto',
-                        cursor: (spacing.isMobile && !isFullscreen) ? 'default' : 'pointer',
+                        pointerEvents: 'auto',
+                        cursor: 'pointer',
                         backgroundColor: 'transparent'
                       }}
                     />
-
-                    {/* Bouton play central (nos images) : desktop uniquement, quand la vidéo est en pause */}
-                    {!spacing.isMobile && !isFullscreen && !isPlaying && (
-                      <div
-                        data-center-play
-                        role="button"
-                        tabIndex={0}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }}
-                        onTouchEnd={async (e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          zIndex: 15,
-                          pointerEvents: 'auto',
-                          width: 64,
-                          height: 64,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '50%',
-                          background: 'rgba(0,0,0,0.4)'
-                        }}
-                        aria-label="Play"
-                      >
-                        <img src="/images/play.png" alt="" style={{ width: 36, height: 36 }} />
-                      </div>
-                    )}
 
                     {/* Contrôles plein écran : à l'intérieur du conteneur avec z-index élevé au-dessus des bandes noires */}
                     {isFullscreen && (
@@ -1329,10 +1306,10 @@ export default function VideoList({ onFullscreenChange }) {
                     )}
 
                     {/* Navbar en bas - Mode normal (desktop uniquement ; sur mobile on affiche l’interface Vimeo) */}
-                    {!isFullscreen && !spacing.isMobile && (
+                    {!isFullscreen && (
                       <div
                         data-navbar
-                        className={`${(showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
+                        className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: '0.1rem 1rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
