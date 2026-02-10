@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import Player from "@vimeo/player";
 import Carousel from "./Carrousel.jsx";
+import MobileVideoPlayer from "./MobileVideoPlayer.jsx";
 import { useOrientation } from "../hooks/useOrientation";
 
 // Dimensions de référence (comme Figma)
@@ -442,29 +443,18 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  // Play/pause : sur mobile, ne JAMAIS await avant play() pour garder le "geste utilisateur" (sinon le navigateur bloque le son)
+  // Une seule fonction : demander à Vimeo de play ou pause ; les événements play/pause mettent à jour l'UI
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
     setIsHovering(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-
-    const isMobile = window.innerWidth <= 820;
-
     try {
-      if (isMobile) {
-        // Mobile : utiliser l'état React (pas getPaused) pour ne rien attendre avant play → son autorisé en 1 clic
-        if (isPlaying) {
-          await playerRef.current.pause();
-        } else {
-          playerRef.current.setMuted(false).catch(() => {});
-          playerRef.current.setVolume(1).catch(() => {});
-          await playerRef.current.play();
-        }
+      const paused = await playerRef.current.getPaused();
+      if (paused) {
+        await playerRef.current.play();
       } else {
-        const paused = await playerRef.current.getPaused();
-        if (paused) await playerRef.current.play();
-        else await playerRef.current.pause();
+        await playerRef.current.pause();
       }
     } catch (err) {
       console.error("Error toggling play/pause:", err);
@@ -1042,6 +1032,14 @@ export default function VideoList({ onFullscreenChange }) {
             >
               {selectedVideo && selectedVideo.url ? (
                 <>
+                  {spacing.isMobile && !isFullscreen ? (
+                    <MobileVideoPlayer
+                      selectedVideo={selectedVideo}
+                      horizontalMargin={spacing.horizontalMargin}
+                      videoHeightPercent={spacing.videoHeightPercent ?? 0.28}
+                      onFullscreen={handleFullscreen}
+                    />
+                  ) : (
                   <div
                     ref={videoContainerRef}
                     className="overflow-hidden roar-blue relative w-full cursor-pointer"
@@ -1453,8 +1451,7 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
                   </div>
-
-
+                  )}
                 </>
               ) : (
                 <div className="flex items-center justify-center h-[12.5rem] md:h-[30.1875rem] bg-gray-200">
