@@ -1097,7 +1097,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=1`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1123,24 +1123,17 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
+                    {/* Overlay : capture clic/touch pour play/pause (navbar et bouton central exclus) */}
                     <div
                       onClick={async (e) => {
-                        // Ne pas capturer les clics sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
+                        if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
                       onTouchStart={async (e) => {
-                        // Ne pas capturer les touches sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
+                        if (e.target.closest('[data-navbar]') || e.target.closest('[data-center-play]')) return;
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
@@ -1152,12 +1145,49 @@ export default function VideoList({ onFullscreenChange }) {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        zIndex: 10, // Au-dessus de l'iframe mais en-dessous des contrôles fullscreen
+                        zIndex: 10,
                         pointerEvents: 'auto',
                         cursor: 'pointer',
                         backgroundColor: 'transparent'
                       }}
                     />
+
+                    {/* Bouton play central (nos images) : visible sur mobile quand la vidéo est en pause */}
+                    {spacing.isMobile && !isFullscreen && !isPlaying && (
+                      <div
+                        data-center-play
+                        role="button"
+                        tabIndex={0}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          await handlePlayPause();
+                        }}
+                        onTouchEnd={async (e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          await handlePlayPause();
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          zIndex: 15,
+                          pointerEvents: 'auto',
+                          width: 64,
+                          height: 64,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '50%',
+                          background: 'rgba(0,0,0,0.4)'
+                        }}
+                        aria-label="Play"
+                      >
+                        <img src="/images/play.png" alt="" style={{ width: 36, height: 36 }} />
+                      </div>
+                    )}
 
                     {/* Contrôles plein écran : à l'intérieur du conteneur avec z-index élevé au-dessus des bandes noires */}
                     {isFullscreen && (
