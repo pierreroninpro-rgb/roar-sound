@@ -576,23 +576,11 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        setIsFullscreen(true);
-        if (onFullscreenChange) onFullscreenChange(true);
-
-        // Reste du code pour desktop (orientation lock, etc.)
-        try {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (orientationErr) {
-          console.log("Screen Orientation API not available:", orientationErr);
-        }
-
-        // Calculer les dimensions pour letterboxing (ratio de la vidéo sélectionnée)
+        // Calculer les dimensions tout de suite après passage en fullscreen (évite décalage navbar/vidéo sur Firefox)
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         const aspectRatio = videoAspectRatio;
-
         let iframeWidth, iframeHeight;
-
         if (screenWidth / screenHeight > aspectRatio) {
           iframeHeight = screenHeight;
           iframeWidth = screenHeight * aspectRatio;
@@ -600,11 +588,19 @@ export default function VideoList({ onFullscreenChange }) {
           iframeWidth = screenWidth;
           iframeHeight = screenWidth / aspectRatio;
         }
-
         setFullscreenVideoDimensions({
           width: `${iframeWidth}px`,
           height: `${iframeHeight}px`
         });
+
+        setIsFullscreen(true);
+        if (onFullscreenChange) onFullscreenChange(true);
+
+        try {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (orientationErr) {
+          console.log("Screen Orientation API not available:", orientationErr);
+        }
       }
     } catch (err) {
       console.error("Error toggling fullscreen:", err);
