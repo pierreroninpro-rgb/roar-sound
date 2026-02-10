@@ -582,11 +582,14 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // Firefox a besoin d’un court délai pour finaliser le plein écran avant qu’on calcule les dimensions (évite la barre noire en haut)
-        const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
-        await new Promise((r) => setTimeout(r, isFirefox ? 150 : 50));
+        setIsFullscreen(true);
+        if (onFullscreenChange) onFullscreenChange(true);
 
-        // Dimensions AVANT setIsFullscreen pour que le 1er rendu fullscreen ait déjà les bonnes dimensions
+        // Firefox a besoin d'un court délai pour finaliser le plein écran avant qu'on calcule les dimensions (évite la barre noire en haut)
+        const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+        await new Promise((r) => setTimeout(r, isFirefox ? 150 : 100));
+
+        // Calculer les dimensions APRÈS le délai pour que Firefox ait le temps de finaliser la transition
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         const aspectRatio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
@@ -603,15 +606,6 @@ export default function VideoList({ onFullscreenChange }) {
           width: `${iframeWidth}px`,
           height: `${iframeHeight}px`
         });
-
-        setIsFullscreen(true);
-        if (onFullscreenChange) onFullscreenChange(true);
-
-        try {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (orientationErr) {
-          console.log("Screen Orientation API not available:", orientationErr);
-        }
       }
     } catch (err) {
       console.error("Error toggling fullscreen:", err);
@@ -1148,7 +1142,7 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l’interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
+                    {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l'interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
                     <div
                       onClick={async (e) => {
                         if (e.target.closest('[data-navbar]')) return;
@@ -1320,7 +1314,7 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
 
-                    {/* Navbar en bas - Mode normal (desktop uniquement ; sur mobile on affiche l’interface Vimeo) */}
+                    {/* Navbar en bas - Mode normal (desktop uniquement ; sur mobile on affiche l'interface Vimeo) */}
                     {!isFullscreen && (
                       <div
                         data-navbar
