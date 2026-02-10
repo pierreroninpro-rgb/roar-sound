@@ -49,6 +49,7 @@ export default function VideoList({ onFullscreenChange }) {
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
   const seekedFromTouchRef = useRef(false); // Évite double seek (touchEnd + click) sur barre
   const playPauseHandledByTouchRef = useRef(false); // Évite double play/pause (touch puis click synthétique) sur mobile
+  const mobilePreparedForPlayRef = useRef(false); // Idée 2 : 1er tap = préparer (unmute), 2e tap = play ; reset au changement de vidéo
   const justFinishedDragRef = useRef(false); // Évite seek au click après un drag (release sur la barre)
   const durationRef = useRef(0); // Cache durée pour drag fluide (éviter await à chaque move)
   const lastSetCurrentTimeRef = useRef(0); // Throttle setCurrentTime pendant le drag
@@ -337,6 +338,7 @@ export default function VideoList({ onFullscreenChange }) {
     if (videoRef.current && selectedVideo) {
       setProgress(0);
       progressRef.current = 0;
+      mobilePreparedForPlayRef.current = false; // Nouvelle vidéo = repartir sur 1er tap = préparer
 
       if (playerRef.current) {
         try {
@@ -444,7 +446,7 @@ export default function VideoList({ onFullscreenChange }) {
   }, [videoAspectRatio]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
-  // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
+  // Sur mobile (hors fullscreen) : idée 2 — 1er tap = préparer (unmute uniquement, bouton reste Play), 2e tap = play (bouton passe Pause).
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
@@ -452,13 +454,31 @@ export default function VideoList({ onFullscreenChange }) {
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     const isMobileDevice = window.innerWidth <= 820;
     try {
-      if (isMobileDevice) {
-        // Mobile : décision immédiate sur isPlaying (pas d'await getPaused) pour que play() reste dans le même geste que le tap → 1 tap suffit.
+      if (isMobileDevice && !isFullscreen) {
+        // Mobile hors fullscreen : 1er tap = préparer (son activé), 2e tap = play/pause.
+        if (!mobilePreparedForPlayRef.current) {
+          mobilePreparedForPlayRef.current = true;
+          playerRef.current.setVolume(1);
+          playerRef.current.setMuted(false);
+          return; // Pas de play, pas de loader ; le bouton reste sur Play.
+        }
         if (isPlaying) {
           await playerRef.current.pause();
         } else {
           await playerRef.current.play();
-          // 50ms après le play : activer le son.
+          setTimeout(() => {
+            if (playerRef.current) {
+              playerRef.current.setVolume(1);
+              playerRef.current.setMuted(false);
+            }
+          }, 50);
+        }
+      } else if (isMobileDevice && isFullscreen) {
+        // Mobile en fullscreen : comportement inchangé (play/pause direct).
+        if (isPlaying) {
+          await playerRef.current.pause();
+        } else {
+          await playerRef.current.play();
           setTimeout(() => {
             if (playerRef.current) {
               playerRef.current.setVolume(1);
