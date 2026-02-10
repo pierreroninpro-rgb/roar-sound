@@ -442,18 +442,29 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  // Une seule fonction : demander à Vimeo de play ou pause ; les événements play/pause mettent à jour l'UI
+  // Play/pause : sur mobile, ne JAMAIS await avant play() pour garder le "geste utilisateur" (sinon le navigateur bloque le son)
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
     setIsHovering(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+
+    const isMobile = window.innerWidth <= 820;
+
     try {
-      const paused = await playerRef.current.getPaused();
-      if (paused) {
-        await playerRef.current.play();
+      if (isMobile) {
+        // Mobile : utiliser l'état React (pas getPaused) pour ne rien attendre avant play → son autorisé en 1 clic
+        if (isPlaying) {
+          await playerRef.current.pause();
+        } else {
+          playerRef.current.setMuted(false).catch(() => {});
+          playerRef.current.setVolume(1).catch(() => {});
+          await playerRef.current.play();
+        }
       } else {
-        await playerRef.current.pause();
+        const paused = await playerRef.current.getPaused();
+        if (paused) await playerRef.current.play();
+        else await playerRef.current.pause();
       }
     } catch (err) {
       console.error("Error toggling play/pause:", err);
