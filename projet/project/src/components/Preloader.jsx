@@ -5,6 +5,7 @@ const Preloader = ({ onComplete, duration = 500 }) => {
   const [opacity, setOpacity] = useState(1);
   const [scale, setScale] = useState(0.7); // Commence petit
   const [isMobile, setIsMobile] = useState(false);
+  const [logoVisible, setLogoVisible] = useState(false); // Masqué au 1er rendu pour éviter le flash en haut à gauche sur Firefox
   const loaderRef = useRef([]);
 
   // Détecter si on est sur mobile
@@ -18,10 +19,30 @@ const Preloader = ({ onComplete, duration = 500 }) => {
   }, []);
 
   useEffect(() => {
+    // Attendre que le layout soit appliqué (évite le flash du logo en haut à gauche sur Firefox)
+    let cancelled = false;
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) setLogoVisible(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!logoVisible) return;
     // Animation d'agrandissement jusqu'à 30% de plus (1.3)
-    setTimeout(() => {
+    const t = setTimeout(() => {
       setScale(1.3);
     }, 50);
+    return () => clearTimeout(t);
+  }, [logoVisible]);
+
+  useEffect(() => {
+    if (!logoVisible) return;
 
     // Animation des points de chargement
     gsap.fromTo(
@@ -48,7 +69,7 @@ const Preloader = ({ onComplete, duration = 500 }) => {
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [onComplete, duration]);
+  }, [onComplete, duration, logoVisible]);
 
   return (
     <div
@@ -77,7 +98,7 @@ const Preloader = ({ onComplete, duration = 500 }) => {
           justifyContent: 'center'
         }}
       >
-        {/* Conteneur du logo avec zoom */}
+        {/* Conteneur du logo avec zoom (invisible au 1er rendu pour Firefox) */}
         <div
           style={{
             position: 'relative',
@@ -87,7 +108,9 @@ const Preloader = ({ onComplete, duration = 500 }) => {
             alignItems: 'center',
             justifyContent: 'center',
             transform: `scale(${scale})`,
-            transition: 'transform 0.35s ease-out'
+            transition: 'transform 0.35s ease-out',
+            opacity: logoVisible ? 1 : 0,
+            transition: 'transform 0.35s ease-out, opacity 0.15s ease-out'
           }}
         >
           {/* Image ROAR.jpg sans rotation */}
