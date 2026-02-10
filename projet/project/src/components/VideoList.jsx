@@ -48,6 +48,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressBarFullscreenRef = useRef(null); // Référence pour la barre de progression (plein écran)
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
   const seekedFromTouchRef = useRef(false); // Évite double seek (touchEnd + click) sur barre
+  const playPauseHandledByTouchRef = useRef(false); // Évite double play/pause (touch puis click synthétique) sur mobile
   const justFinishedDragRef = useRef(false); // Évite seek au click après un drag (release sur la barre)
   const durationRef = useRef(0); // Cache durée pour drag fluide (éviter await à chaque move)
   const lastSetCurrentTimeRef = useRef(0); // Throttle setCurrentTime pendant le drag
@@ -1141,17 +1142,19 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       onClick={async (e) => {
                         if (e.target.closest('[data-navbar]')) return;
+                        if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return; // mobile uniquement : évite double fire touch+click
                         if (e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
-                      onTouchStart={async (e) => {
+                      onTouchEnd={async (e) => {
                         if (e.target.closest('[data-navbar]')) return;
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }
+                        if (e.target !== e.currentTarget) return;
+                        e.preventDefault();
+                        if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                        await handlePlayPause();
+                        if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
                       }}
                       style={{
                         position: 'absolute',
@@ -1182,7 +1185,7 @@ export default function VideoList({ onFullscreenChange }) {
                           justifyContent: 'space-between'
                         }}
                       >
-                        {/* Bouton fermer en haut à droite - même visibilité que la barre des contrôles (masquage après ~3 s sans mouvement) */}
+                        {/* Bouton fermer en haut à droite - desktop : toujours visible ; mobile : masquage après ~3 s sans mouvement */}
                         <button
                           data-fullscreen-close
                           onClick={(e) => {
@@ -1194,7 +1197,7 @@ export default function VideoList({ onFullscreenChange }) {
                             setShowControls(true);
                             setIsHovering(true);
                           }}
-                          className={(!isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
+                          className={(!spacing.isMobile || !isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
                           style={{
                             position: 'absolute',
                             top: '1rem',
@@ -1216,10 +1219,10 @@ export default function VideoList({ onFullscreenChange }) {
                             style={{ display: 'block' }}
                           />
                         </button>
-                        {/* Barre des contrôles en bas */}
+                        {/* Barre des contrôles en bas - desktop : toujours visible ; mobile : masquage après ~3 s */}
                         <div
                           data-fullscreen-navbar
-                          className={(!isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
+                          className={(!spacing.isMobile || !isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
                           style={{
                             position: 'absolute',
                             bottom: 0,
@@ -1341,12 +1344,15 @@ export default function VideoList({ onFullscreenChange }) {
                           onClick={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
+                            if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
                             await handlePlayPause();
                           }}
-                          onTouchStart={async (e) => {
+                          onTouchEnd={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
+                            if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
                             await handlePlayPause();
+                            if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
                           }}
                           style={{
                             cursor: 'pointer',
