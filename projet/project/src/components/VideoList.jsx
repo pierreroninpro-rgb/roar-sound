@@ -351,6 +351,19 @@ export default function VideoList({ onFullscreenChange }) {
           playerRef.current = new Player(videoRef.current);
           setIsPlaying(false);
 
+          // Mobile : préparer le son dès le chargement (un seul clic pour play + son)
+          playerRef.current.on("loaded", async () => {
+            if (window.innerWidth <= 820) {
+              try {
+                await playerRef.current.setVolume(1);
+                await playerRef.current.setMuted(false);
+                setIsMuted(false);
+              } catch (err) {
+                console.log("Could not prepare audio on load:", err);
+              }
+            }
+          });
+
           // Listen to timeupdate events for progress
           playerRef.current.on("timeupdate", async (data) => {
             if (isDraggingProgress.current) return; // Pendant le drag : on garde la position locale, pas de saccade
@@ -451,9 +464,7 @@ export default function VideoList({ onFullscreenChange }) {
       } else {
         const isMobileDevice = window.innerWidth <= 820;
         if (isMobileDevice) {
-          playerRef.current.setMuted(false).catch(() => {});
-          playerRef.current.setVolume(1).catch(() => {});
-          setIsMuted(false);
+          // Mobile : son déjà préparé par on("loaded"), juste play
           await playerRef.current.play();
           setIsPlaying(true);
         } else {
