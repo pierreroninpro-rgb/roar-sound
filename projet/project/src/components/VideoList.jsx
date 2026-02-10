@@ -444,7 +444,7 @@ export default function VideoList({ onFullscreenChange }) {
   }, [videoAspectRatio]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
-  // Sur mobile : play + setVolume(1) + setMuted(false) dans le même geste utilisateur pour que le navigateur autorise le son.
+  // Sur mobile : court délai (100ms) pour laisser React/Vimeo se synchroniser, puis getPaused() pour être en phase avec le player. Après play(), unmute 50ms plus tard pour activer le son.
   const togglePlayPause = async () => {
     if (!playerRef.current) return;
     setShowControls(true);
@@ -453,14 +453,20 @@ export default function VideoList({ onFullscreenChange }) {
     const isMobileDevice = window.innerWidth <= 820;
     try {
       if (isMobileDevice) {
-        // Mobile : on se base sur l'état React (pas d'await getPaused) pour garder le geste utilisateur.
-        if (isPlaying) {
-          await playerRef.current.pause();
-        } else {
-          // Lancer le son + play dans le même geste (requis par Safari/Chrome pour autoriser le son).
-          playerRef.current.setVolume(1);
-          playerRef.current.setMuted(false);
+        // Délai court pour laisser les events Vimeo (play/pause) mettre à jour l'état avant de décider.
+        await new Promise((r) => setTimeout(r, 100));
+        const paused = await playerRef.current.getPaused();
+        if (paused) {
           await playerRef.current.play();
+          // 50ms après le play : activer le son (effet "mini bouton invisible" pour débloquer l'audio).
+          setTimeout(() => {
+            if (playerRef.current) {
+              playerRef.current.setVolume(1);
+              playerRef.current.setMuted(false);
+            }
+          }, 50);
+        } else {
+          await playerRef.current.pause();
         }
       } else {
         const paused = await playerRef.current.getPaused();
