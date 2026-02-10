@@ -1,7 +1,6 @@
 /**
  * Lecteur vidéo mobile avec react-player (Vimeo).
  * Design identique à la navbar actuelle : play/pause, barre de progression, son, plein écran.
- * @see https://github.com/CookPete/react-player
  */
 import { useRef, useState, useCallback } from "react";
 import ReactPlayer from "react-player";
@@ -18,9 +17,12 @@ export default function MobileVideoPlayer({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
 
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback((e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     setPlaying((p) => !p);
   }, []);
 
@@ -34,9 +36,18 @@ export default function MobileVideoPlayer({
 
   const handleToggleMute = useCallback((e) => {
     e?.stopPropagation();
+    e?.preventDefault();
     setIsMuted((m) => !m);
-    setVolume((v) => (v > 0 ? 0 : 1));
   }, []);
+
+  const handleFullscreenClick = useCallback(
+    (e) => {
+      e?.stopPropagation();
+      e?.preventDefault();
+      if (onFullscreen) onFullscreen();
+    },
+    [onFullscreen]
+  );
 
   const seekTo = useCallback((clientX) => {
     if (!progressBarRef.current || !playerRef.current) return;
@@ -50,43 +61,22 @@ export default function MobileVideoPlayer({
 
   if (!selectedVideo?.url) return null;
 
+  const containerHeight = `${videoHeightPercent * 100}vh`;
+  const minHeight = 180;
+
   return (
     <div
       className="overflow-hidden relative w-full"
       style={{
-        height: `${videoHeightPercent * 100}vh`,
+        height: containerHeight,
+        minHeight,
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        backgroundColor: "transparent",
+        backgroundColor: "#000",
       }}
     >
-      <ReactPlayer
-        ref={playerRef}
-        url={selectedVideo.url}
-        playing={playing}
-        volume={volume}
-        muted={isMuted}
-        loop
-        controls={false}
-        width="100%"
-        height="100%"
-        style={{ position: "absolute", top: 0, left: 0 }}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onProgress={handleProgress}
-        onDuration={handleDuration}
-        config={{
-          vimeo: {
-            playerOptions: {
-              responsive: true,
-              title: selectedVideo.title,
-            },
-          },
-        }}
-      />
-
-      {/* Overlay clic → play/pause (comme ton design) */}
+      {/* Zone du lecteur : visible, avec prévisualisation Vimeo (light) */}
       <div
         style={{
           position: "absolute",
@@ -94,14 +84,43 @@ export default function MobileVideoPlayer({
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 10,
-          pointerEvents: "none",
+          width: "100%",
+          height: "100%",
+          minHeight,
+          background: "#000",
         }}
-      />
+      >
+        <ReactPlayer
+          ref={playerRef}
+          url={selectedVideo.url}
+          playing={playing}
+          volume={isMuted ? 0 : 1}
+          muted={isMuted}
+          loop
+          controls={false}
+          width="100%"
+          height="100%"
+          light={true}
+          playsinline
+          style={{ position: "absolute", top: 0, left: 0 }}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onProgress={handleProgress}
+          onDuration={handleDuration}
+          config={{
+            vimeo: {
+              playerOptions: {
+                responsive: true,
+                title: selectedVideo.title,
+              },
+            },
+          }}
+        />
+      </div>
 
-      {/* Navbar : même design que VideoList (play, barre, son, plein écran) */}
       <div
         data-navbar
+        role="toolbar"
         style={{
           padding: "0.1rem 1rem",
           paddingBottom: "calc(0.1rem + 4px)",
@@ -112,7 +131,6 @@ export default function MobileVideoPlayer({
           bottom: "4px",
           left: `${horizontalMargin}px`,
           right: `${horizontalMargin}px`,
-          transition: "opacity 0.3s ease-in-out",
           zIndex: 20,
           pointerEvents: "auto",
           fontFamily: "'Helvetica', 'Arial', sans-serif",
@@ -120,80 +138,115 @@ export default function MobileVideoPlayer({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
+        <button
+          type="button"
           onClick={handlePlayPause}
-          onTouchStart={(e) => {
+          onTouchEnd={(e) => {
+            e.preventDefault();
             e.stopPropagation();
-            handlePlayPause();
+            handlePlayPause(e);
           }}
           style={{
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: 0,
+            margin: 0,
+            border: "none",
+            background: "transparent",
           }}
+          aria-label={playing ? "Pause" : "Play"}
         >
           <img
             src={playing ? "/images/pause.png" : "/images/play.png"}
-            alt={playing ? "Pause" : "Play"}
-            style={{ width: "20px", height: "20px" }}
+            alt=""
+            style={{ width: "20px", height: "20px", display: "block" }}
           />
-        </div>
+        </button>
 
         <div
           ref={progressBarRef}
           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+          style={{ minWidth: 0 }}
           onClick={(e) => {
             e.stopPropagation();
             seekTo(e.clientX);
           }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           onTouchEnd={(e) => {
             if (!e.changedTouches?.length) return;
-            e.preventDefault();
             e.stopPropagation();
+            e.preventDefault();
             seekTo(e.changedTouches[0].clientX);
           }}
+          role="slider"
+          aria-label="Progression"
         >
           <div className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible">
             <div
               className="absolute top-0 left-0 h-full bg-white rounded-full"
               style={{
                 width: `${progressPct}%`,
-                transition: "all 0.1s ease-out",
+                transition: "width 0.1s ease-out",
               }}
             />
           </div>
         </div>
 
-        <div
+        <button
+          type="button"
           onClick={handleToggleMute}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleToggleMute(e);
+          }}
           style={{
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: 0,
+            margin: 0,
+            border: "none",
+            background: "transparent",
           }}
+          aria-label={isMuted ? "Activer le son" : "Couper le son"}
         >
           <img
             src={isMuted ? "/images/soundoff.png" : "/images/soundon.png"}
-            alt={isMuted ? "Unmute" : "Mute"}
-            style={{ width: "36px", height: "36px" }}
+            alt=""
+            style={{ width: "36px", height: "36px", display: "block" }}
           />
-        </div>
+        </button>
 
         {onFullscreen && (
           <button
             type="button"
-            onClick={(e) => {
+            onClick={handleFullscreenClick}
+            onTouchEnd={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              onFullscreen();
+              handleFullscreenClick(e);
             }}
-            className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
-            style={{ padding: "0.25rem" }}
+            style={{
+              padding: "0.25rem",
+              cursor: "pointer",
+              border: "none",
+              background: "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            aria-label="Plein écran"
           >
             <img
               src="/images/open.png"
-              alt="Plein écran"
+              alt=""
               style={{
                 display: "block",
                 width: "20px",
