@@ -39,6 +39,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
+  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
@@ -414,7 +415,26 @@ export default function VideoList({ onFullscreenChange }) {
               const videoWidth = await playerRef.current.getVideoWidth();
               const videoHeight = await playerRef.current.getVideoHeight();
               if (videoWidth && videoHeight) {
-                setVideoAspectRatio(videoWidth / videoHeight);
+                const aspectRatio = videoWidth / videoHeight;
+                setVideoAspectRatio(aspectRatio);
+                // Recalculer la largeur visible pour la navbar (après un court délai pour que le DOM soit à jour)
+                requestAnimationFrame(() => {
+                  if (videoContainerRef.current) {
+                    const cw = videoContainerRef.current.offsetWidth;
+                    const ch = videoContainerRef.current.offsetHeight;
+                    const containerRatio = cw / ch;
+                    const vr = aspectRatio;
+                    let visibleWidth, leftOffset;
+                    if (containerRatio > vr) {
+                      visibleWidth = ch * vr;
+                      leftOffset = (cw - visibleWidth) / 2;
+                    } else {
+                      visibleWidth = cw;
+                      leftOffset = 0;
+                    }
+                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                  }
+                });
               }
             } catch (_) {
               setVideoAspectRatio(16 / 9);
@@ -425,7 +445,25 @@ export default function VideoList({ onFullscreenChange }) {
             const videoWidth = await playerRef.current.getVideoWidth();
             const videoHeight = await playerRef.current.getVideoHeight();
             if (videoWidth && videoHeight) {
-              setVideoAspectRatio(videoWidth / videoHeight);
+              const aspectRatio = videoWidth / videoHeight;
+              setVideoAspectRatio(aspectRatio);
+              requestAnimationFrame(() => {
+                if (videoContainerRef.current) {
+                  const cw = videoContainerRef.current.offsetWidth;
+                  const ch = videoContainerRef.current.offsetHeight;
+                  const containerRatio = cw / ch;
+                  const vr = aspectRatio;
+                  let visibleWidth, leftOffset;
+                  if (containerRatio > vr) {
+                    visibleWidth = ch * vr;
+                    leftOffset = (cw - visibleWidth) / 2;
+                  } else {
+                    visibleWidth = cw;
+                    leftOffset = 0;
+                  }
+                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                }
+              });
             }
           } catch (_) {}
 
@@ -450,6 +488,45 @@ export default function VideoList({ onFullscreenChange }) {
   useEffect(() => {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
+
+  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
+  const calculateVisibleVideoDimensions = () => {
+    if (!videoContainerRef.current || isFullscreen) {
+      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
+      return;
+    }
+
+    const containerWidth = videoContainerRef.current.offsetWidth;
+    const containerHeight = videoContainerRef.current.offsetHeight;
+    const containerRatio = containerWidth / containerHeight;
+    const videoRatio = videoAspectRatio;
+
+    let visibleWidth, leftOffset;
+
+    if (containerRatio > videoRatio) {
+      // Container plus large que la vidéo -> bandes noires sur les côtés
+      visibleWidth = containerHeight * videoRatio;
+      leftOffset = (containerWidth - visibleWidth) / 2;
+    } else {
+      // Container plus haut que la vidéo ou ratio identique -> pas de bandes sur les côtés
+      visibleWidth = containerWidth;
+      leftOffset = 0;
+    }
+
+    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+  };
+
+  // Recalculer les dimensions visibles quand le ratio ou la taille change
+  useEffect(() => {
+    calculateVisibleVideoDimensions();
+
+    const handleResize = () => {
+      calculateVisibleVideoDimensions();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
@@ -1340,15 +1417,18 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: '0.1rem 1rem',
+                          padding: spacing.isMobile ? '0.1rem 1rem' : '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '1rem',
+                          gap: spacing.isMobile ? '1rem' : '0.5rem',
+                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          left: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
-                          right: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
+                          ...(spacing.isMobile
+                            ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
+                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
+                          ),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
