@@ -1066,7 +1066,7 @@ export default function VideoList({ onFullscreenChange }) {
                         bottom: 0,
                         backgroundColor: isFullscreen ? '#000' : '#F6F6F6',
                         zIndex: 100,
-                        pointerEvents: 'auto'
+                        pointerEvents: 'none' // Laisse passer les touches (fix Safari mobile) — masque visuel uniquement
                       }}
                     />
                   )}
