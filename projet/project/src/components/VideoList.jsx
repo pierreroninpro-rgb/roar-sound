@@ -39,6 +39,8 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
+  const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
+  const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -969,6 +971,9 @@ export default function VideoList({ onFullscreenChange }) {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
+      if (transitionOverlayTimeoutRef.current) {
+        clearTimeout(transitionOverlayTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -1050,6 +1055,21 @@ export default function VideoList({ onFullscreenChange }) {
             >
               {selectedVideo && selectedVideo.url ? (
                 <>
+                  {/* Overlay fond page 0.3s au changement de vidéo pour masquer la transition paysage/portrait */}
+                  {showTransitionOverlay && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: isFullscreen ? '#000' : '#F6F6F6',
+                        zIndex: 100,
+                        pointerEvents: 'auto'
+                      }}
+                    />
+                  )}
                   <div
                     ref={videoContainerRef}
                     className="overflow-hidden roar-blue relative w-full cursor-pointer"
@@ -1547,7 +1567,16 @@ export default function VideoList({ onFullscreenChange }) {
           >
             <Carousel
               videos={videos}
-              onSelectVideo={setSelectedVideo}
+              onSelectVideo={(video) => {
+                if (video?.id === selectedVideo?.id) return;
+                setShowTransitionOverlay(true);
+                setSelectedVideo(video); // Nouvelle vidéo tout de suite pour qu’elle se charge sous l’overlay
+                if (transitionOverlayTimeoutRef.current) clearTimeout(transitionOverlayTimeoutRef.current);
+                transitionOverlayTimeoutRef.current = setTimeout(() => {
+                  setShowTransitionOverlay(false);
+                  transitionOverlayTimeoutRef.current = null;
+                }, 450);
+              }}
               selectedVideo={selectedVideo}
             />
           </div>
