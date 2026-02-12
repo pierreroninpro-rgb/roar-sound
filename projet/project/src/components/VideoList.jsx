@@ -1427,6 +1427,11 @@ export default function VideoList({ onFullscreenChange }) {
                           bottom: '4px',
                           left: `${visibleVideoDimensions.leftOffset}px`,
                           width: visibleVideoDimensions.width,
+                          ...(spacing.isMobile && {
+                            overflowX: 'auto',
+                            overflowY: 'hidden',
+                            WebkitOverflowScrolling: 'touch'
+                          }),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
@@ -1443,7 +1448,153 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY */}
+                        {/* Wrapper mobile : largeur min = contenu, pour scroll horizontal si vidéo étroite */}
+                        {spacing.isMobile ? (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              minWidth: 'min-content',
+                              flex: '1 1 auto',
+                              minHeight: '32px'
+                            }}
+                          >
+                            {/* Icône PAUSE/PLAY - mobile : ne jamais s'écraser */}
+                            <div
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                                await handlePlayPause();
+                              }}
+                              onTouchEnd={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                                await handlePlayPause();
+                                if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                width: '28px',
+                                height: '28px',
+                                minWidth: '28px',
+                                minHeight: '28px'
+                              }}
+                            >
+                              <img
+                                src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                                alt={isPlaying ? 'Pause' : 'Play'}
+                                style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }}
+                              />
+                            </div>
+
+                            {/* Barre de progression - mobile : seule zone qui rétrécit */}
+                            <div
+                              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                              style={{ minWidth: 0, flex: '1 1 0%' }}
+                              onClick={async (e) => {
+                                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = false;
+                                await seekBarAtClientX(e.clientX, progressBarRef.current);
+                              }}
+                              onTouchEnd={(e) => {
+                                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                                if (!e.changedTouches?.length) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = true;
+                                seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
+                              }}
+                            >
+                              <div
+                                ref={progressBarRef}
+                                className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                              >
+                                <div
+                                  className="absolute top-0 left-0 h-full bg-white rounded-full"
+                                  style={{
+                                    width: `${progress}%`,
+                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Icône MUTE/UNMUTE - mobile : affichée uniquement quand la vidéo est large (pas de bandes sur les côtés) */}
+                            {visibleVideoDimensions.leftOffset === 0 && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleMute(e);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleToggleMute(e);
+                                }}
+                                style={{
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  width: '36px',
+                                  height: '36px',
+                                  minWidth: '36px',
+                                  minHeight: '36px'
+                                }}
+                              >
+                                <img
+                                  src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                                  alt={isMuted ? 'Unmute' : 'Mute'}
+                                  style={{ width: '36px', height: '36px', objectFit: 'contain', display: 'block' }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Bouton Fullscreen - mobile : ne jamais s'écraser */}
+                            {!isFullscreen && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                className="bg-transparent border-none cursor-pointer flex items-center justify-center"
+                                style={{
+                                  pointerEvents: 'auto',
+                                  padding: '0.25rem',
+                                  flexShrink: 0,
+                                  width: '28px',
+                                  height: '28px',
+                                  minWidth: '28px',
+                                  minHeight: '28px'
+                                }}
+                              >
+                                <img
+                                  src="/images/open.png"
+                                  alt="Plein écran"
+                                  style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }}
+                                />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                        {/* Icône PAUSE/PLAY - desktop : inchangé */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1475,9 +1626,10 @@ export default function VideoList({ onFullscreenChange }) {
                           />
                         </div>
 
-                        {/* Barre de progression */}
+                        {/* Barre de progression - desktop */}
                         <div
                           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                          style={spacing.isMobile ? undefined : { minWidth: '100px' }}
                           onClick={async (e) => {
                             if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
@@ -1508,7 +1660,7 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         </div>
 
-                        {/* Icône MUTE/UNMUTE */}
+                        {/* Icône MUTE/UNMUTE - desktop : inchangé */}
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1536,7 +1688,7 @@ export default function VideoList({ onFullscreenChange }) {
                           />
                         </div>
 
-                        {/* Bouton Fullscreen - Masqué en plein écran mobile natif */}
+                        {/* Bouton Fullscreen - desktop */}
                         {!(spacing.isMobile && isFullscreen) && (
                           <button
                             type="button"
@@ -1566,6 +1718,8 @@ export default function VideoList({ onFullscreenChange }) {
                               }}
                             />
                           </button>
+                        )}
+                          </>
                         )}
                       </div>
                     )}
