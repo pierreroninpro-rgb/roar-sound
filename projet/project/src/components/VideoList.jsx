@@ -1448,7 +1448,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Wrapper mobile : largeur min = contenu, pour scroll horizontal si vidéo étroite */}
+                        {/* Wrapper mobile : vidéo étroite = space-between pour voir la barre de progression (play à gauche, fullscreen à droite) */}
                         {spacing.isMobile ? (
                           <div
                             style={{
@@ -1457,7 +1457,11 @@ export default function VideoList({ onFullscreenChange }) {
                               gap: '1rem',
                               minWidth: 'min-content',
                               flex: '1 1 auto',
-                              minHeight: '32px'
+                              minHeight: '32px',
+                              width: '100%',
+                              ...(visibleVideoDimensions.leftOffset > 0 && {
+                                justifyContent: 'space-between'
+                              })
                             }}
                           >
                             {/* Icône PAUSE/PLAY - mobile : ne jamais s'écraser */}
