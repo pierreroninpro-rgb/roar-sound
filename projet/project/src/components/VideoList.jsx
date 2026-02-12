@@ -1411,7 +1411,7 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
 
-                    {/* Navbar en bas - Mode normal (desktop uniquement ; sur mobile on affiche l'interface Vimeo) */}
+                    {/* Navbar en bas - Mode normal : largeur = largeur visible de la vidéo (mobile + desktop) */}
                     {!isFullscreen && (
                       <div
                         data-navbar
@@ -1422,13 +1422,11 @@ export default function VideoList({ onFullscreenChange }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: spacing.isMobile ? '1rem' : '0.5rem',
-                          justifyContent: (!spacing.isMobile && visibleVideoDimensions.leftOffset > 0) ? 'center' : undefined,
+                          justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          ...(spacing.isMobile
-                            ? { left: `${spacing.horizontalMargin}px`, right: `${spacing.horizontalMargin}px` }
-                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
-                          ),
+                          left: `${visibleVideoDimensions.leftOffset}px`,
+                          width: visibleVideoDimensions.width,
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
