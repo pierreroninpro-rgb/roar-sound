@@ -41,6 +41,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
+  const [isSafariOrEcosiaDesktop, setIsSafariOrEcosiaDesktop] = useState(false); // Safari/Ecosia desktop (réduire espace sound-fullscreen)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
@@ -495,6 +496,14 @@ export default function VideoList({ onFullscreenChange }) {
     const isIOS = /iP(ad|hone|od)/i.test(navigator.userAgent);
     const isChromeIOS = navigator.userAgent.includes('CriOS');
     setIsSafariMobile(isIOS && !isChromeIOS);
+  }, []);
+
+  // Détecter Safari ou Ecosia sur desktop (pour réduire l'espace sound-fullscreen d'1px)
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isSafari = /Safari/.test(ua) && !/Chrome|Chromium/.test(ua);
+    const isEcosia = /Ecosia/i.test(ua);
+    setIsSafariOrEcosiaDesktop(window.innerWidth > 500 && (isSafari || isEcosia));
   }, []);
 
   // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
@@ -1170,8 +1179,9 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
+                      // Mobile : bandes noires sur les côtés quand la vidéo est plus étroite que le conteneur (format intermédiaire)
                       // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '#000' : 'transparent') : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1199,7 +1209,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '#000' : 'transparent') : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1636,7 +1646,7 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         ) : (
                           <>
-                        {/* Icône PAUSE/PLAY - desktop : inchangé */}
+                        {/* Icône PAUSE/PLAY - desktop : forme fixe pour ne pas déformer en vidéo étroite */}
                         <div
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1655,7 +1665,12 @@ export default function VideoList({ onFullscreenChange }) {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            width: '28px',
+                            minWidth: '28px',
+                            height: '28px',
+                            minHeight: '28px'
                           }}
                         >
                           <img
@@ -1663,15 +1678,17 @@ export default function VideoList({ onFullscreenChange }) {
                             alt={isPlaying ? 'Pause' : 'Play'}
                             style={{
                               width: '20px',
-                              height: '20px'
+                              height: '20px',
+                              objectFit: 'contain',
+                              display: 'block'
                             }}
                           />
                         </div>
 
-                        {/* Barre de progression - desktop */}
+                        {/* Barre de progression - desktop : seule zone qui rétrécit en vidéo étroite */}
                         <div
                           className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                          style={spacing.isMobile ? undefined : { minWidth: '100px' }}
+                          style={spacing.isMobile ? undefined : { minWidth: visibleVideoDimensions.leftOffset > 0 ? 0 : '100px', flex: '1 1 0%' }}
                           onClick={async (e) => {
                             if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                             e.stopPropagation();
@@ -1702,7 +1719,7 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         </div>
 
-                        {/* Icône MUTE/UNMUTE - desktop : inchangé */}
+                        {/* Icône MUTE/UNMUTE - desktop : forme fixe pour ne pas déformer en vidéo étroite */}
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1717,7 +1734,12 @@ export default function VideoList({ onFullscreenChange }) {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            width: '36px',
+                            minWidth: '36px',
+                            height: '36px',
+                            minHeight: '36px'
                           }}
                         >
                           <img
@@ -1725,12 +1747,14 @@ export default function VideoList({ onFullscreenChange }) {
                             alt={isMuted ? 'Unmute' : 'Mute'}
                             style={{
                               width: '36px',
-                              height: '36px'
+                              height: '36px',
+                              objectFit: 'contain',
+                              display: 'block'
                             }}
                           />
                         </div>
 
-                        {/* Bouton Fullscreen - desktop */}
+                        {/* Bouton Fullscreen - desktop : forme fixe ; Safari/Ecosia : -1px entre sound et fullscreen */}
                         {!(spacing.isMobile && isFullscreen) && (
                           <button
                             type="button"
@@ -1743,10 +1767,17 @@ export default function VideoList({ onFullscreenChange }) {
                               e.stopPropagation();
                               handleFullscreen();
                             }}
-                            className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                            className="bg-transparent border-none cursor-pointer flex items-center justify-center"
                             style={{
                               pointerEvents: 'auto',
-                              padding: '0.25rem'
+                              padding: '0.25rem',
+                              paddingRight: '7px',
+                              flexShrink: 0,
+                              width: '28px',
+                              minWidth: '28px',
+                              height: '28px',
+                              minHeight: '28px',
+                              ...(isSafariOrEcosiaDesktop && { marginLeft: '-8px' })
                             }}
                           >
                             <img
@@ -1756,7 +1787,8 @@ export default function VideoList({ onFullscreenChange }) {
                                 display: 'block',
                                 width: `${spacing.openIconWidth}px`,
                                 height: `${spacing.openIconHeight}px`,
-                                marginBottom: spacing.isMobile ? '3px' : '0'
+                                marginBottom: spacing.isMobile ? '3px' : '0',
+                                objectFit: 'contain'
                               }}
                             />
                           </button>
