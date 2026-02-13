@@ -41,7 +41,6 @@ export default function VideoList({ onFullscreenChange }) {
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
-  const [isSafariOrEcosiaDesktop, setIsSafariOrEcosiaDesktop] = useState(false); // Safari/Ecosia desktop (réduire espace sound-fullscreen)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
@@ -412,7 +411,7 @@ export default function VideoList({ onFullscreenChange }) {
               const muted = await playerRef.current.getMuted();
               const volume = await playerRef.current.getVolume();
               setIsMuted(muted || volume === 0);
-            } catch (_) {}
+            } catch (_) { }
             try {
               const videoWidth = await playerRef.current.getVideoWidth();
               const videoHeight = await playerRef.current.getVideoHeight();
@@ -467,7 +466,7 @@ export default function VideoList({ onFullscreenChange }) {
                 }
               });
             }
-          } catch (_) {}
+          } catch (_) { }
 
           setIsPlaying(false);
           setShowControls(true);
@@ -496,14 +495,6 @@ export default function VideoList({ onFullscreenChange }) {
     const isIOS = /iP(ad|hone|od)/i.test(navigator.userAgent);
     const isChromeIOS = navigator.userAgent.includes('CriOS');
     setIsSafariMobile(isIOS && !isChromeIOS);
-  }, []);
-
-  // Détecter Safari ou Ecosia sur desktop (pour réduire l'espace sound-fullscreen d'1px)
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    const isSafari = /Safari/.test(ua) && !/Chrome|Chromium/.test(ua);
-    const isEcosia = /Ecosia/i.test(ua);
-    setIsSafariOrEcosiaDesktop(window.innerWidth > 500 && (isSafari || isEcosia));
   }, []);
 
   // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
@@ -1179,9 +1170,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : bandes noires sur les côtés quand la vidéo est plus étroite que le conteneur (format intermédiaire)
                       // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '#000' : 'transparent') : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1209,7 +1199,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '#000' : 'transparent') : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1442,13 +1432,13 @@ export default function VideoList({ onFullscreenChange }) {
                           paddingBottom: 'calc(0.1rem + 4px)',
                           paddingLeft: spacing.isMobile
                             ? (visibleVideoDimensions.leftOffset > 0
-                                ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-left, 0px))')
-                                : 'max(1rem, env(safe-area-inset-left, 0px))')
+                              ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-left, 0px))')
+                              : 'max(1rem, env(safe-area-inset-left, 0px))')
                             : undefined,
                           paddingRight: spacing.isMobile
                             ? (visibleVideoDimensions.leftOffset > 0
-                                ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-right, 0px))')
-                                : 'max(1rem, env(safe-area-inset-right, 0px))')
+                              ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-right, 0px))')
+                              : 'max(1rem, env(safe-area-inset-right, 0px))')
                             : undefined,
                           display: 'flex',
                           alignItems: 'center',
@@ -1646,153 +1636,131 @@ export default function VideoList({ onFullscreenChange }) {
                           </div>
                         ) : (
                           <>
-                        {/* Icône PAUSE/PLAY - desktop : forme fixe pour ne pas déformer en vidéo étroite */}
-                        <div
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
-                            await handlePlayPause();
-                          }}
-                          onTouchEnd={async (e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
-                            await handlePlayPause();
-                            if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            width: '28px',
-                            minWidth: '28px',
-                            height: '28px',
-                            minHeight: '28px'
-                          }}
-                        >
-                          <img
-                            src={isPlaying ? '/images/pause.png' : '/images/play.png'}
-                            alt={isPlaying ? 'Pause' : 'Play'}
-                            style={{
-                              width: '20px',
-                              height: '20px',
-                              objectFit: 'contain',
-                              display: 'block'
-                            }}
-                          />
-                        </div>
-
-                        {/* Barre de progression - desktop : seule zone qui rétrécit en vidéo étroite */}
-                        <div
-                          className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                          style={spacing.isMobile ? undefined : { minWidth: visibleVideoDimensions.leftOffset > 0 ? 0 : '100px', flex: '1 1 0%' }}
-                          onClick={async (e) => {
-                            if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
-                            e.stopPropagation();
-                            seekedFromTouchRef.current = false;
-                            await seekBarAtClientX(e.clientX, progressBarRef.current);
-                          }}
-                          onTouchEnd={(e) => {
-                            if (isDraggingProgressState || justFinishedDragRef.current) return;
-                            if (!e.changedTouches?.length) return;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            seekedFromTouchRef.current = true;
-                            seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
-                            setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
-                          }}
-                        >
-                          <div
-                            ref={progressBarRef}
-                            className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
-                          >
+                            {/* Icône PAUSE/PLAY - desktop : inchangé */}
                             <div
-                              className="absolute top-0 left-0 h-full bg-white rounded-full"
-                              style={{
-                                width: `${progress}%`,
-                                transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                                await handlePlayPause();
                               }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Icône MUTE/UNMUTE - desktop : forme fixe pour ne pas déformer en vidéo étroite */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleMute(e);
-                          }}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleToggleMute(e);
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            width: '36px',
-                            minWidth: '36px',
-                            height: '36px',
-                            minHeight: '36px'
-                          }}
-                        >
-                          <img
-                            src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
-                            alt={isMuted ? 'Unmute' : 'Mute'}
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              objectFit: 'contain',
-                              display: 'block'
-                            }}
-                          />
-                        </div>
-
-                        {/* Bouton Fullscreen - desktop : forme fixe ; Safari/Ecosia : -1px entre sound et fullscreen */}
-                        {!(spacing.isMobile && isFullscreen) && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFullscreen();
-                            }}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleFullscreen();
-                            }}
-                            className="bg-transparent border-none cursor-pointer flex items-center justify-center"
-                            style={{
-                              pointerEvents: 'auto',
-                              padding: '0.25rem',
-                              paddingRight: '7px',
-                              flexShrink: 0,
-                              width: '28px',
-                              minWidth: '28px',
-                              height: '28px',
-                              minHeight: '28px',
-                              ...(isSafariOrEcosiaDesktop && { marginLeft: '-8px' })
-                            }}
-                          >
-                            <img
-                              src="/images/open.png"
-                              alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-                              style={{
-                                display: 'block',
-                                width: `${spacing.openIconWidth}px`,
-                                height: `${spacing.openIconHeight}px`,
-                                marginBottom: spacing.isMobile ? '3px' : '0',
-                                objectFit: 'contain'
+                              onTouchEnd={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                                await handlePlayPause();
+                                if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
                               }}
-                            />
-                          </button>
-                        )}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <img
+                                src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                                alt={isPlaying ? 'Pause' : 'Play'}
+                                style={{
+                                  width: '20px',
+                                  height: '20px'
+                                }}
+                              />
+                            </div>
+
+                            {/* Barre de progression - desktop */}
+                            <div
+                              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                              style={spacing.isMobile ? undefined : { minWidth: '100px' }}
+                              onClick={async (e) => {
+                                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = false;
+                                await seekBarAtClientX(e.clientX, progressBarRef.current);
+                              }}
+                              onTouchEnd={(e) => {
+                                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                                if (!e.changedTouches?.length) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = true;
+                                seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
+                              }}
+                            >
+                              <div
+                                ref={progressBarRef}
+                                className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                              >
+                                <div
+                                  className="absolute top-0 left-0 h-full bg-white rounded-full"
+                                  style={{
+                                    width: `${progress}%`,
+                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Icône MUTE/UNMUTE - desktop : inchangé */}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleMute(e);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleToggleMute(e);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <img
+                                src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                                alt={isMuted ? 'Unmute' : 'Mute'}
+                                style={{
+                                  width: '36px',
+                                  height: '36px'
+                                }}
+                              />
+                            </div>
+
+                            {/* Bouton Fullscreen - desktop */}
+                            {!(spacing.isMobile && isFullscreen) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                                style={{
+                                  pointerEvents: 'auto',
+                                  padding: '0.25rem'
+                                }}
+                              >
+                                <img
+                                  src="/images/open.png"
+                                  alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+                                  style={{
+                                    display: 'block',
+                                    width: `${spacing.openIconWidth}px`,
+                                    height: `${spacing.openIconHeight}px`,
+                                    marginBottom: spacing.isMobile ? '3px' : '0'
+                                  }}
+                                />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -1881,7 +1849,7 @@ export default function VideoList({ onFullscreenChange }) {
                 transitionOverlayTimeoutRef.current = setTimeout(() => {
                   setShowTransitionOverlay(false);
                   transitionOverlayTimeoutRef.current = null;
-                }, 650);
+                }, 450);
               }}
               selectedVideo={selectedVideo}
             />
