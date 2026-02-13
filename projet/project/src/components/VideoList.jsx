@@ -1483,7 +1483,7 @@ export default function VideoList({ onFullscreenChange }) {
                               width: '100%',
                               ...(visibleVideoDimensions.leftOffset > 0 && {
                                 justifyContent: 'space-between',
-                                marginLeft: '-6px'
+                                marginLeft: isSafariMobile ? '-4px' : '-6px'
                               })
                             }}
                           >
