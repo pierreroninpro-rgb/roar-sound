@@ -1418,7 +1418,7 @@ export default function VideoList({ onFullscreenChange }) {
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: spacing.isMobile
-                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 6px' : '0.1rem 1rem')
+                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 6px 0.1rem 2px' : '0.1rem 1rem')
                             : '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
@@ -1451,7 +1451,7 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Wrapper mobile : vidéo étroite = space-between + pas de min-content pour que la barre reste visible */}
+                        {/* Wrapper mobile : vidéo étroite = space-between + décalage à gauche pour tout voir */}
                         {spacing.isMobile ? (
                           <div
                             style={{
@@ -1463,7 +1463,8 @@ export default function VideoList({ onFullscreenChange }) {
                               minHeight: '32px',
                               width: '100%',
                               ...(visibleVideoDimensions.leftOffset > 0 && {
-                                justifyContent: 'space-between'
+                                justifyContent: 'space-between',
+                                marginLeft: '-6px'
                               })
                             }}
                           >
@@ -1506,13 +1507,13 @@ export default function VideoList({ onFullscreenChange }) {
                               />
                             </div>
 
-                            {/* Barre de progression - mobile : en vidéo étroite 30% plus petite (minWidth 70px, hauteur réduite) */}
+                            {/* Barre de progression - mobile : en vidéo étroite encore 10% plus petite (minWidth 63px, hauteur 2.52px) */}
                             <div
                               className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
                               style={{
-                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 70 : 0,
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 63 : 0,
                                 flex: '1 1 0%',
-                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 22 : 32
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 20 : 32
                               }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
@@ -1533,7 +1534,7 @@ export default function VideoList({ onFullscreenChange }) {
                               <div
                                 ref={progressBarRef}
                                 className={`relative w-full bg-gray-600 rounded-full overflow-visible ${visibleVideoDimensions.leftOffset <= 0 ? 'h-1' : ''}`}
-                                style={visibleVideoDimensions.leftOffset > 0 ? { height: '2.8px' } : undefined}
+                                style={visibleVideoDimensions.leftOffset > 0 ? { height: '2.52px' } : undefined}
                               >
                                 <div
                                   className="absolute top-0 left-0 h-full bg-white rounded-full"
