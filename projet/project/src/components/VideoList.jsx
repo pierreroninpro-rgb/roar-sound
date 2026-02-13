@@ -1418,9 +1418,16 @@ export default function VideoList({ onFullscreenChange }) {
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: spacing.isMobile
-                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 3px' : '0.1rem 1rem')
+                            ? undefined
                             : '0.1rem 0.75rem',
+                          paddingTop: spacing.isMobile ? '0.1rem' : undefined,
                           paddingBottom: 'calc(0.1rem + 4px)',
+                          paddingLeft: spacing.isMobile
+                            ? (visibleVideoDimensions.leftOffset > 0 ? 'max(3px, env(safe-area-inset-left, 0px))' : 'max(1rem, env(safe-area-inset-left, 0px))')
+                            : undefined,
+                          paddingRight: spacing.isMobile
+                            ? (visibleVideoDimensions.leftOffset > 0 ? 'max(3px, env(safe-area-inset-right, 0px))' : 'max(1rem, env(safe-area-inset-right, 0px))')
+                            : undefined,
                           display: 'flex',
                           alignItems: 'center',
                           gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : '0.5rem',
