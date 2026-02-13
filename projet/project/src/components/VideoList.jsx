@@ -1430,9 +1430,10 @@ export default function VideoList({ onFullscreenChange }) {
                           left: `${visibleVideoDimensions.leftOffset}px`,
                           width: visibleVideoDimensions.width,
                           ...(spacing.isMobile && {
-                            overflowX: 'auto',
-                            overflowY: 'hidden',
-                            WebkitOverflowScrolling: 'touch'
+                            ...(visibleVideoDimensions.leftOffset > 0
+                              ? { overflow: 'hidden' }
+                              : { overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }
+                            )
                           }),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
@@ -1466,7 +1467,7 @@ export default function VideoList({ onFullscreenChange }) {
                               })
                             }}
                           >
-                            {/* Icône PAUSE/PLAY - mobile : ne jamais s'écraser */}
+                            {/* Icône PAUSE/PLAY - mobile : en vidéo étroite 10% plus petit */}
                             <div
                               onClick={async (e) => {
                                 e.stopPropagation();
@@ -1487,25 +1488,31 @@ export default function VideoList({ onFullscreenChange }) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
-                                width: '28px',
-                                height: '28px',
-                                minWidth: '28px',
-                                minHeight: '28px'
+                                width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28
                               }}
                             >
                               <img
                                 src={isPlaying ? '/images/pause.png' : '/images/play.png'}
                                 alt={isPlaying ? 'Pause' : 'Play'}
-                                style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }}
+                                style={{
+                                  width: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                  height: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }}
                               />
                             </div>
 
-                            {/* Barre de progression - mobile : en vidéo étroite minWidth pour rester visible */}
+                            {/* Barre de progression - mobile : en vidéo étroite 30% plus petite (minWidth 70px, hauteur réduite) */}
                             <div
-                              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                              className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
                               style={{
-                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 100 : 0,
-                                flex: '1 1 0%'
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 70 : 0,
+                                flex: '1 1 0%',
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 22 : 32
                               }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
@@ -1525,7 +1532,8 @@ export default function VideoList({ onFullscreenChange }) {
                             >
                               <div
                                 ref={progressBarRef}
-                                className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                                className={`relative w-full bg-gray-600 rounded-full overflow-visible ${visibleVideoDimensions.leftOffset <= 0 ? 'h-1' : ''}`}
+                                style={visibleVideoDimensions.leftOffset > 0 ? { height: '2.8px' } : undefined}
                               >
                                 <div
                                   className="absolute top-0 left-0 h-full bg-white rounded-full"
@@ -1569,7 +1577,7 @@ export default function VideoList({ onFullscreenChange }) {
                               </div>
                             )}
 
-                            {/* Bouton Fullscreen - mobile : ne jamais s'écraser */}
+                            {/* Bouton Fullscreen - mobile : en vidéo étroite 10% plus petit */}
                             {!isFullscreen && (
                               <button
                                 type="button"
@@ -1587,16 +1595,21 @@ export default function VideoList({ onFullscreenChange }) {
                                   pointerEvents: 'auto',
                                   padding: '0.25rem',
                                   flexShrink: 0,
-                                  width: '28px',
-                                  height: '28px',
-                                  minWidth: '28px',
-                                  minHeight: '28px'
+                                  width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                  height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                  minWidth: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
+                                  minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28
                                 }}
                               >
                                 <img
                                   src="/images/open.png"
                                   alt="Plein écran"
-                                  style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }}
+                                  style={{
+                                    width: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                    height: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                    objectFit: 'contain',
+                                    display: 'block'
+                                  }}
                                 />
                               </button>
                             )}
