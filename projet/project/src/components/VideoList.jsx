@@ -1417,11 +1417,13 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: spacing.isMobile ? '0.1rem 1rem' : '0.1rem 0.75rem',
+                          padding: spacing.isMobile
+                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 6px' : '0.1rem 1rem')
+                            : '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: spacing.isMobile ? '1rem' : '0.5rem',
+                          gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : '0.5rem',
                           justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
@@ -1448,14 +1450,14 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Wrapper mobile : vidéo étroite = space-between pour voir la barre de progression (play à gauche, fullscreen à droite) */}
+                        {/* Wrapper mobile : vidéo étroite = space-between + pas de min-content pour que la barre reste visible */}
                         {spacing.isMobile ? (
                           <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '1rem',
-                              minWidth: 'min-content',
+                              gap: visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem',
+                              minWidth: visibleVideoDimensions.leftOffset > 0 ? 0 : 'min-content',
                               flex: '1 1 auto',
                               minHeight: '32px',
                               width: '100%',
@@ -1498,10 +1500,13 @@ export default function VideoList({ onFullscreenChange }) {
                               />
                             </div>
 
-                            {/* Barre de progression - mobile : seule zone qui rétrécit */}
+                            {/* Barre de progression - mobile : en vidéo étroite minWidth pour rester visible */}
                             <div
                               className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                              style={{ minWidth: 0, flex: '1 1 0%' }}
+                              style={{
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 100 : 0,
+                                flex: '1 1 0%'
+                              }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                                 e.stopPropagation();
