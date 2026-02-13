@@ -1530,9 +1530,9 @@ export default function VideoList({ onFullscreenChange }) {
                             <div
                               className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
                               style={{
-                                minWidth: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 54 : 63) : 0,
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 49 : 63) : 0,
                                 flex: '1 1 0%',
-                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 17 : 20) : 32
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 15 : 20) : 32
                               }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
@@ -1553,7 +1553,7 @@ export default function VideoList({ onFullscreenChange }) {
                               <div
                                 ref={progressBarRef}
                                 className={`relative w-full bg-gray-600 rounded-full overflow-visible ${visibleVideoDimensions.leftOffset <= 0 ? 'h-1' : ''}`}
-                                style={visibleVideoDimensions.leftOffset > 0 ? { height: isSafariMobile ? '2.14px' : '2.52px' } : undefined}
+                                style={visibleVideoDimensions.leftOffset > 0 ? { height: isSafariMobile ? '1.93px' : '2.52px' } : undefined}
                               >
                                 <div
                                   className="absolute top-0 left-0 h-full bg-white rounded-full"
