@@ -1418,7 +1418,7 @@ export default function VideoList({ onFullscreenChange }) {
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: spacing.isMobile
-                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 6px 0.1rem 2px' : '0.1rem 1rem')
+                            ? (visibleVideoDimensions.leftOffset > 0 ? '0.1rem 3px' : '0.1rem 1rem')
                             : '0.1rem 0.75rem',
                           paddingBottom: 'calc(0.1rem + 4px)',
                           display: 'flex',
