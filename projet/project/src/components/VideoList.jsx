@@ -1849,7 +1849,7 @@ export default function VideoList({ onFullscreenChange }) {
                 transitionOverlayTimeoutRef.current = setTimeout(() => {
                   setShowTransitionOverlay(false);
                   transitionOverlayTimeoutRef.current = null;
-                }, 450);
+                }, 1100);
               }}
               selectedVideo={selectedVideo}
             />
