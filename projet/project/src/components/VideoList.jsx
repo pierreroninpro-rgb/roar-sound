@@ -40,6 +40,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
+  const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
@@ -488,6 +489,13 @@ export default function VideoList({ onFullscreenChange }) {
   useEffect(() => {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
+
+  // Détecter Safari ou Ecosia sur iOS uniquement (pas Chrome : CriOS) pour réduire la barre en mobile
+  useEffect(() => {
+    const isIOS = /iP(ad|hone|od)/i.test(navigator.userAgent);
+    const isChromeIOS = navigator.userAgent.includes('CriOS');
+    setIsSafariMobile(isIOS && !isChromeIOS);
+  }, []);
 
   // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
   const calculateVisibleVideoDimensions = () => {
@@ -1514,13 +1522,13 @@ export default function VideoList({ onFullscreenChange }) {
                               />
                             </div>
 
-                            {/* Barre de progression - mobile : en vidéo étroite encore 10% plus petite (minWidth 63px, hauteur 2.52px) */}
+                            {/* Barre de progression - mobile : en vidéo étroite encore 10% plus petite ; Safari iOS : -15% de plus */}
                             <div
                               className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
                               style={{
-                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 63 : 0,
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 54 : 63) : 0,
                                 flex: '1 1 0%',
-                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 20 : 32
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 17 : 20) : 32
                               }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
@@ -1541,7 +1549,7 @@ export default function VideoList({ onFullscreenChange }) {
                               <div
                                 ref={progressBarRef}
                                 className={`relative w-full bg-gray-600 rounded-full overflow-visible ${visibleVideoDimensions.leftOffset <= 0 ? 'h-1' : ''}`}
-                                style={visibleVideoDimensions.leftOffset > 0 ? { height: '2.52px' } : undefined}
+                                style={visibleVideoDimensions.leftOffset > 0 ? { height: isSafariMobile ? '2.14px' : '2.52px' } : undefined}
                               >
                                 <div
                                   className="absolute top-0 left-0 h-full bg-white rounded-full"
