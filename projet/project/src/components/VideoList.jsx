@@ -1431,10 +1431,14 @@ export default function VideoList({ onFullscreenChange }) {
                           paddingTop: spacing.isMobile ? '0.1rem' : undefined,
                           paddingBottom: 'calc(0.1rem + 4px)',
                           paddingLeft: spacing.isMobile
-                            ? (visibleVideoDimensions.leftOffset > 0 ? 'max(3px, env(safe-area-inset-left, 0px))' : 'max(1rem, env(safe-area-inset-left, 0px))')
+                            ? (visibleVideoDimensions.leftOffset > 0
+                                ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-left, 0px))')
+                                : 'max(1rem, env(safe-area-inset-left, 0px))')
                             : undefined,
                           paddingRight: spacing.isMobile
-                            ? (visibleVideoDimensions.leftOffset > 0 ? 'max(3px, env(safe-area-inset-right, 0px))' : 'max(1rem, env(safe-area-inset-right, 0px))')
+                            ? (visibleVideoDimensions.leftOffset > 0
+                                ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-right, 0px))')
+                                : 'max(1rem, env(safe-area-inset-right, 0px))')
                             : undefined,
                           display: 'flex',
                           alignItems: 'center',
