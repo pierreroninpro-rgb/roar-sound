@@ -26,7 +26,7 @@ const REFERENCE_VALUES = {
 
 // Mobile : bandes noires uniquement si la largeur visible de la vidéo (px) est dans cette plage — à toi d'ajuster les valeurs
 const MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MIN_PX = 150;
-const MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MAX_PX = 340;
+const MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MAX_PX = 335;
 
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
