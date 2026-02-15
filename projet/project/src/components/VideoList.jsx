@@ -40,7 +40,8 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0, widthPx: null }); // widthPx = largeur visible en px (pour éligibilité bandes noires mobile)
-  const [mobileVideoContainerHeightPx, setMobileVideoContainerHeightPx] = useState(0); // Hauteur réelle du conteneur (mobile) pour même rendu Safari/Chrome/Ecosia
+  const [mobileVideoContainerHeightPx, setMobileVideoContainerHeightPx] = useState(0); // Hauteur réelle du conteneur (mobile)
+  const [mobileVideoContainerWidthPx, setMobileVideoContainerWidthPx] = useState(0); // Largeur réelle (mobile) — pour calcul cover
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
@@ -503,17 +504,20 @@ export default function VideoList({ onFullscreenChange }) {
     if (!videoContainerRef.current || isFullscreen) {
       setVisibleVideoDimensions({ width: '100%', leftOffset: 0, widthPx: null });
       setMobileVideoContainerHeightPx(0);
+      setMobileVideoContainerWidthPx(0);
       return;
     }
 
     const containerWidth = videoContainerRef.current.offsetWidth;
     const containerHeight = videoContainerRef.current.offsetHeight;
 
-    // Mobile + paysage : mémoriser la hauteur réelle du conteneur pour forcer les dimensions du wrapper (Safari = Chrome = Ecosia)
+    // Mobile + paysage : mémoriser largeur et hauteur pour calcul "cover" (remplir tout le conteneur, léger zoom, même rendu Safari/Chrome/Ecosia)
     if (spacing.isMobile && videoAspectRatio >= 1) {
       setMobileVideoContainerHeightPx(containerHeight);
+      setMobileVideoContainerWidthPx(containerWidth);
     } else {
       setMobileVideoContainerHeightPx(0);
+      setMobileVideoContainerWidthPx(0);
     }
     const containerRatio = containerWidth / containerHeight;
     const videoRatio = videoAspectRatio;
@@ -1210,16 +1214,33 @@ export default function VideoList({ onFullscreenChange }) {
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
                         ...(!isFullscreen && (spacing.isMobile && videoAspectRatio >= 1
-                          ? {
-                              height: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx}px` : '100%',
-                              width: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx * videoAspectRatio}px` : 'auto',
-                              maxWidth: 'none',
-                              position: 'absolute',
-                              left: '50%',
-                              top: 0,
-                              transform: 'translateX(-50%)',
-                              flexShrink: 0
-                            }
+                          ? (mobileVideoContainerHeightPx && mobileVideoContainerWidthPx
+                              ? (() => {
+                                  // Cover : remplir tout le conteneur (aucune bande), overflow centré et masqué — même rendu Safari/Chrome/Ecosia
+                                  const coverW = Math.max(mobileVideoContainerWidthPx, mobileVideoContainerHeightPx * videoAspectRatio);
+                                  const coverH = Math.max(mobileVideoContainerHeightPx, mobileVideoContainerWidthPx / videoAspectRatio);
+                                  return {
+                                    width: `${coverW}px`,
+                                    height: `${coverH}px`,
+                                    maxWidth: 'none',
+                                    position: 'absolute',
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    flexShrink: 0
+                                  };
+                                })()
+                              : {
+                                  height: '100%',
+                                  width: 'auto',
+                                  maxWidth: 'none',
+                                  aspectRatio: videoAspectRatio,
+                                  position: 'absolute',
+                                  left: '50%',
+                                  top: 0,
+                                  transform: 'translateX(-50%)',
+                                  flexShrink: 0
+                                })
                           : {
                               width: '100%',
                               maxWidth: '100%',
