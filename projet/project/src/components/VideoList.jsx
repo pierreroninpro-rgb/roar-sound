@@ -39,6 +39,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
+  const [videoAspectRatioKnown, setVideoAspectRatioKnown] = useState(false); // true une fois le ratio connu (évite bandes noires aléatoires sur portrait en mobile)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom "cover" 16:9 en mobile pour éviter les bandes noires
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
@@ -343,6 +344,7 @@ export default function VideoList({ onFullscreenChange }) {
       setProgress(0);
       progressRef.current = 0;
       setVideoAspectRatio(16 / 9);
+      setVideoAspectRatioKnown(false); // Pas de fond noir tant qu'on ne connaît pas le ratio (évite bandes sur portrait)
 
       if (playerRef.current) {
         try {
@@ -431,6 +433,7 @@ export default function VideoList({ onFullscreenChange }) {
               if (videoWidth && videoHeight) {
                 const aspectRatio = videoWidth / videoHeight;
                 setVideoAspectRatio(aspectRatio);
+                setVideoAspectRatioKnown(true);
                 // Recalculer la largeur visible pour la navbar puis masquer l'overlay après que le layout ait peint
                 requestAnimationFrame(() => {
                   if (videoContainerRef.current) {
@@ -451,10 +454,12 @@ export default function VideoList({ onFullscreenChange }) {
                   hideTransitionOverlayAfterLayout();
                 });
               } else {
+                setVideoAspectRatioKnown(true);
                 hideTransitionOverlayAfterLayout();
               }
             } catch (_) {
               setVideoAspectRatio(16 / 9);
+              setVideoAspectRatioKnown(true);
               hideTransitionOverlayAfterLayout();
             }
           });
@@ -465,6 +470,7 @@ export default function VideoList({ onFullscreenChange }) {
             if (videoWidth && videoHeight) {
               const aspectRatio = videoWidth / videoHeight;
               setVideoAspectRatio(aspectRatio);
+              setVideoAspectRatioKnown(true);
               requestAnimationFrame(() => {
                 if (videoContainerRef.current) {
                   const cw = videoContainerRef.current.offsetWidth;
@@ -484,9 +490,11 @@ export default function VideoList({ onFullscreenChange }) {
                 hideTransitionOverlayAfterLayout();
               });
             } else {
+              setVideoAspectRatioKnown(true);
               hideTransitionOverlayAfterLayout();
             }
           } catch (_) {
+            setVideoAspectRatioKnown(true);
             hideTransitionOverlayAfterLayout();
           }
 
@@ -1242,8 +1250,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Fond noir pour bandes (côtés ou haut/bas) : desktop toujours (sauf portrait) ; mobile idem (sauf portrait)
-                      backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
+                      // Fond noir uniquement si ratio connu et paysage ; sinon transparent (évite bandes noires aléatoires sur portrait en mobile)
+                      backgroundColor: isFullscreen ? '#000' : (videoAspectRatioKnown && videoAspectRatio >= 1 ? '#000' : 'transparent'),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1272,7 +1280,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
+                        backgroundColor: isFullscreen ? '#000' : (videoAspectRatioKnown && videoAspectRatio >= 1 ? '#000' : 'transparent'),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
