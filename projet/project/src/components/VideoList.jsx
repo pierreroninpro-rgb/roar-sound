@@ -1062,10 +1062,10 @@ export default function VideoList({ onFullscreenChange }) {
     };
   }, []);
 
-  // Hauteur du conteneur vidéo en px (mobile) pour le mode "pleine hauteur" — rendu identique Chrome / Ecosia / Safari
+  // Hauteur du conteneur vidéo en px (mobile) pour le mode "pleine hauteur" — rendu identique Chrome / Ecosia / Safari (fallback 0.28 si videoHeightPercent pas encore dispo)
   const mobileVideoContainerHeightPx =
-    spacing.isMobile && spacing.videoHeightPercent && typeof window !== 'undefined'
-      ? (window.innerHeight || document.documentElement.clientHeight) * spacing.videoHeightPercent
+    spacing.isMobile && typeof window !== 'undefined'
+      ? (window.innerHeight || document.documentElement.clientHeight) * (spacing.videoHeightPercent ?? 0.28)
       : 0;
 
   // Log de l'état actuel du spacing avec détails
