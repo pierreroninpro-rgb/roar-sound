@@ -1446,9 +1446,7 @@ export default function VideoList({ onFullscreenChange }) {
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: spacing.isMobile
-                            ? undefined
-                            : '0.1rem 0.75rem',
+                          padding: spacing.isMobile ? undefined : '0.1rem 1rem',
                           paddingTop: spacing.isMobile ? '0.1rem' : undefined,
                           paddingBottom: 'calc(0.1rem + 4px)',
                           paddingLeft: spacing.isMobile
@@ -1467,8 +1465,14 @@ export default function VideoList({ onFullscreenChange }) {
                           justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          left: `${visibleVideoDimensions.leftOffset}px`,
-                          width: visibleVideoDimensions.width,
+                          ...(!spacing.isMobile && {
+                            left: `calc(${visibleVideoDimensions.leftOffset}px + 1rem)`,
+                            width: `calc(${visibleVideoDimensions.width} - 2rem)`
+                          }),
+                          ...(spacing.isMobile && {
+                            left: `${visibleVideoDimensions.leftOffset}px`,
+                            width: visibleVideoDimensions.width
+                          }),
                           ...(spacing.isMobile && {
                             ...(visibleVideoDimensions.leftOffset > 0
                               ? { overflow: 'hidden' }
@@ -1476,7 +1480,7 @@ export default function VideoList({ onFullscreenChange }) {
                             )
                           }),
                           transition: 'opacity 0.3s ease-in-out',
-                          zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
+                          zIndex: 20,
                           pointerEvents: 'auto',
                           fontFamily: "'Helvetica', 'Arial', sans-serif",
                           boxSizing: 'border-box'
@@ -1484,7 +1488,6 @@ export default function VideoList({ onFullscreenChange }) {
                         onClick={(e) => e.stopPropagation()}
                         onTouchStart={(e) => {
                           e.stopPropagation();
-                          // Sur mobile, afficher toujours la navbar au touch
                           setShowControls(true);
                           setIsHovering(true);
                         }}
