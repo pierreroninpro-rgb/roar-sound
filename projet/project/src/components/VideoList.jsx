@@ -356,6 +356,18 @@ export default function VideoList({ onFullscreenChange }) {
         if (videoRef.current) {
           playerRef.current = new Player(videoRef.current);
 
+          const hideTransitionOverlayAfterLayout = () => {
+            if (transitionOverlayTimeoutRef.current) {
+              clearTimeout(transitionOverlayTimeoutRef.current);
+              transitionOverlayTimeoutRef.current = null;
+            }
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                setShowTransitionOverlay(false);
+              });
+            });
+          };
+
           // ——— Événements Vimeo : on met à jour l'UI uniquement ———
           playerRef.current.on("play", () => {
             setIsPlaying(true);
@@ -419,7 +431,7 @@ export default function VideoList({ onFullscreenChange }) {
               if (videoWidth && videoHeight) {
                 const aspectRatio = videoWidth / videoHeight;
                 setVideoAspectRatio(aspectRatio);
-                // Recalculer la largeur visible pour la navbar (après un court délai pour que le DOM soit à jour)
+                // Recalculer la largeur visible pour la navbar puis masquer l'overlay après que le layout ait peint
                 requestAnimationFrame(() => {
                   if (videoContainerRef.current) {
                     const cw = videoContainerRef.current.offsetWidth;
@@ -436,10 +448,14 @@ export default function VideoList({ onFullscreenChange }) {
                     }
                     setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
                   }
+                  hideTransitionOverlayAfterLayout();
                 });
+              } else {
+                hideTransitionOverlayAfterLayout();
               }
             } catch (_) {
               setVideoAspectRatio(16 / 9);
+              hideTransitionOverlayAfterLayout();
             }
           });
 
@@ -465,9 +481,14 @@ export default function VideoList({ onFullscreenChange }) {
                   }
                   setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
                 }
+                hideTransitionOverlayAfterLayout();
               });
+            } else {
+              hideTransitionOverlayAfterLayout();
             }
-          } catch (_) { }
+          } catch (_) {
+            hideTransitionOverlayAfterLayout();
+          }
 
           setIsPlaying(false);
           setShowControls(true);
