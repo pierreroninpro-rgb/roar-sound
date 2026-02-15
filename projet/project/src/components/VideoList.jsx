@@ -1062,6 +1062,12 @@ export default function VideoList({ onFullscreenChange }) {
     };
   }, []);
 
+  // Hauteur du conteneur vidéo en px (mobile) pour le mode "pleine hauteur" — rendu identique Chrome / Ecosia / Safari
+  const mobileVideoContainerHeightPx =
+    spacing.isMobile && spacing.videoHeightPercent && typeof window !== 'undefined'
+      ? (window.innerHeight || document.documentElement.clientHeight) * spacing.videoHeightPercent
+      : 0;
+
   // Log de l'état actuel du spacing avec détails
   console.log('VideoList render - current spacing state:', {
     navbarSpacing: `${spacing.navbarSpacing.toFixed(2)}px`,
@@ -1202,10 +1208,9 @@ export default function VideoList({ onFullscreenChange }) {
                         backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
                         ...(!isFullscreen && (spacing.isMobile && videoAspectRatio >= 1
                           ? {
-                              height: '100%',
-                              width: 'auto',
+                              height: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx}px` : '100%',
+                              width: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx * videoAspectRatio}px` : 'auto',
                               maxWidth: 'none',
-                              aspectRatio: videoAspectRatio,
                               position: 'absolute',
                               left: '50%',
                               top: 0,
