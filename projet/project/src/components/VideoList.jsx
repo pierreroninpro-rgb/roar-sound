@@ -25,7 +25,7 @@ const REFERENCE_VALUES = {
 };
 
 // Mobile uniquement : au-dessus de ce ratio (ex. 1.65), pas de bandes noires — pour exclure les vidéos les plus larges (16:9 = 1.78)
-const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.80;
+const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.70;
 
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
