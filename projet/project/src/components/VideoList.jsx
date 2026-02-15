@@ -40,6 +40,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
+  const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom "cover" 16:9 en mobile pour éviter les bandes noires
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
@@ -497,10 +498,11 @@ export default function VideoList({ onFullscreenChange }) {
     setIsSafariMobile(isIOS && !isChromeIOS);
   }, []);
 
-  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
+  // Calculer la largeur visible de la vidéo (zone sans bandes) + zoom cover 16:9 en mobile
   const calculateVisibleVideoDimensions = () => {
     if (!videoContainerRef.current || isFullscreen) {
       setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
+      setMobileCoverScale(1);
       return;
     }
 
@@ -512,16 +514,26 @@ export default function VideoList({ onFullscreenChange }) {
     let visibleWidth, leftOffset;
 
     if (containerRatio > videoRatio) {
-      // Container plus large que la vidéo -> bandes noires sur les côtés
       visibleWidth = containerHeight * videoRatio;
       leftOffset = (containerWidth - visibleWidth) / 2;
     } else {
-      // Container plus haut que la vidéo ou ratio identique -> pas de bandes sur les côtés
       visibleWidth = containerWidth;
       leftOffset = 0;
     }
 
     setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+
+    // Mobile : petit zoom "cover" pour les vidéos 16:9 pour éviter les bandes noires
+    const isMobileView = window.innerWidth <= 500;
+    const is16_9 = Math.abs(videoRatio - 16 / 9) < 0.05;
+    if (isMobileView && is16_9 && containerWidth > 0 && containerHeight > 0) {
+      const videoW = Math.min(containerWidth, containerHeight * videoRatio);
+      const videoH = Math.min(containerHeight, containerWidth / videoRatio);
+      const scale = Math.max(containerWidth / videoW, containerHeight / videoH);
+      setMobileCoverScale(scale);
+    } else {
+      setMobileCoverScale(1);
+    }
   };
 
   // Recalculer les dimensions visibles quand le ratio ou la taille change
@@ -534,7 +546,7 @@ export default function VideoList({ onFullscreenChange }) {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, spacing.isMobile, isFullscreen]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
@@ -1196,7 +1208,8 @@ export default function VideoList({ onFullscreenChange }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      zIndex: isFullscreen ? 2147483646 : undefined
+                      zIndex: isFullscreen ? 2147483646 : undefined,
+                      overflow: spacing.isMobile && Math.abs(videoAspectRatio - 16 / 9) < 0.05 && mobileCoverScale > 1.001 ? 'hidden' : undefined
                     }}
                     onClick={handleVideoClick}
                     onMouseEnter={handleVideoMouseEnter}
@@ -1228,7 +1241,11 @@ export default function VideoList({ onFullscreenChange }) {
                           maxHeight: '100%',
                           aspectRatio: videoAspectRatio,
                           position: 'relative',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          ...(spacing.isMobile && Math.abs(videoAspectRatio - 16 / 9) < 0.05 && mobileCoverScale > 1.001 && {
+                            transform: `scale(${mobileCoverScale})`,
+                            transformOrigin: 'center center'
+                          })
                         }),
                         ...(isFullscreen && {
                           width: '100%',
