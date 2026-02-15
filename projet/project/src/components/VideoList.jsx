@@ -1191,8 +1191,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                      // Fond noir pour bandes (côtés ou haut/bas) : desktop toujours (sauf portrait) ; mobile idem (sauf portrait)
+                      backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1220,7 +1220,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                        backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
