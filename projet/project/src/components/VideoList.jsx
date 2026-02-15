@@ -612,30 +612,14 @@ export default function VideoList({ onFullscreenChange }) {
           const iframe = videoRef.current;
           // 1) API Player Vimeo si déjà prête (sans attendre)
           if (playerRef.current) {
-            try {
-              await playerRef.current.requestFullscreen();
-              return;
-            } catch (err) {
+            playerRef.current.requestFullscreen().catch((err) => {
               console.error("Mobile Vimeo fullscreen error:", err);
-            }
+            });
+            return;
           }
           // 2) Sinon fullscreen de l’iframe immédiatement (iframe déjà dans le DOM = pas d’attente)
-          try {
-            if (iframe.requestFullscreen) {
-              await iframe.requestFullscreen();
-            } else if (iframe.webkitRequestFullscreen) {
-              await iframe.webkitRequestFullscreen();
-            } else if (iframe.mozRequestFullScreen) {
-              await iframe.mozRequestFullScreen();
-            } else if (iframe.msRequestFullscreen) {
-              await iframe.msRequestFullscreen();
-            } else {
-              throw new Error("No fullscreen method on iframe");
-            }
-            return;
-          } catch (fallbackErr) {
-            console.error("Mobile iframe fullscreen failed:", fallbackErr);
-          }
+          const fs = iframe.requestFullscreen || iframe.webkitRequestFullscreen || iframe.mozRequestFullScreen || iframe.msRequestFullscreen;
+          if (fs) fs.call(iframe).catch((e) => console.error("Mobile iframe fullscreen failed:", e));
         }
 
         // Sur mobile : uniquement Vimeo en fullscreen — ne jamais afficher notre overlay
@@ -1632,10 +1616,13 @@ export default function VideoList({ onFullscreenChange }) {
                                   e.stopPropagation();
                                   handleFullscreen();
                                 }}
+                                onTouchStart={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
                                 onTouchEnd={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleFullscreen();
                                 }}
                                 className="bg-transparent border-none cursor-pointer flex items-center justify-center"
                                 style={{
@@ -1765,10 +1752,13 @@ export default function VideoList({ onFullscreenChange }) {
                                   e.stopPropagation();
                                   handleFullscreen();
                                 }}
+                                onTouchStart={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
                                 onTouchEnd={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleFullscreen();
                                 }}
                                 className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
                                 style={{
