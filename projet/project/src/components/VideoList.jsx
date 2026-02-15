@@ -638,7 +638,10 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop ou fallback mobile : plein écran via document**
+        // Sur mobile : uniquement Vimeo en fullscreen — ne jamais afficher notre overlay
+        if (isMobileDevice) return;
+
+        // **Desktop : plein écran via document (notre overlay)**
         // 1) Dimensions dès maintenant pour éviter un second reflow (flash) au passage fullscreen, surtout quand la vidéo est en pause.
         const ratio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
         const screenW = window.innerWidth;
@@ -660,11 +663,7 @@ export default function VideoList({ onFullscreenChange }) {
 
         try {
           if (elementToFullscreen.requestFullscreen) {
-            if (!isMobileDevice) {
-              await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
-            } else {
-              await elementToFullscreen.requestFullscreen();
-            }
+            await elementToFullscreen.requestFullscreen({ navigationUI: 'hide' });
           } else if (elementToFullscreen.webkitRequestFullscreen) {
             if (Element && Element.ALLOW_KEYBOARD_INPUT) {
               await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
