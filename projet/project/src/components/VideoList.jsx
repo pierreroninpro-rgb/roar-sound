@@ -631,7 +631,12 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop : ton code actuel**
+        // **Desktop ou fallback mobile : plein écran via document**
+        // Mise à jour optimiste : afficher tout de suite l’overlay fullscreen (z-index élevé) pour éviter
+        // que sur mobile la vidéo semble "charger" avant l’ouverture — l’UI fullscreen s’affiche au clic.
+        setIsFullscreen(true);
+        if (onFullscreenChange) onFullscreenChange(true);
+
         const elementToFullscreen = document.documentElement;
 
         try {
@@ -654,23 +659,27 @@ export default function VideoList({ onFullscreenChange }) {
           }
         } catch (err) {
           console.log("Fullscreen request failed, trying without options:", err);
-          if (elementToFullscreen.requestFullscreen) {
-            await elementToFullscreen.requestFullscreen();
-          } else if (elementToFullscreen.webkitRequestFullscreen) {
-            if (Element && Element.ALLOW_KEYBOARD_INPUT) {
-              await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-            } else {
-              await elementToFullscreen.webkitRequestFullscreen();
+          try {
+            if (elementToFullscreen.requestFullscreen) {
+              await elementToFullscreen.requestFullscreen();
+            } else if (elementToFullscreen.webkitRequestFullscreen) {
+              if (Element && Element.ALLOW_KEYBOARD_INPUT) {
+                await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+              } else {
+                await elementToFullscreen.webkitRequestFullscreen();
+              }
+            } else if (elementToFullscreen.mozRequestFullScreen) {
+              await elementToFullscreen.mozRequestFullScreen();
+            } else if (elementToFullscreen.msRequestFullscreen) {
+              await elementToFullscreen.msRequestFullscreen();
             }
-          } else if (elementToFullscreen.mozRequestFullScreen) {
-            await elementToFullscreen.mozRequestFullScreen();
-          } else if (elementToFullscreen.msRequestFullscreen) {
-            await elementToFullscreen.msRequestFullscreen();
+          } catch (retryErr) {
+            // Échec définitif : revenir en mode normal
+            setIsFullscreen(false);
+            if (onFullscreenChange) onFullscreenChange(false);
+            return;
           }
         }
-
-        setIsFullscreen(true);
-        if (onFullscreenChange) onFullscreenChange(true);
 
         // Firefox a besoin d'un court délai pour finaliser le plein écran avant qu'on calcule les dimensions (évite la barre noire en haut)
         const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
@@ -1170,11 +1179,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : bandes noires uniquement pour format "Giveon" (intermédiaire : ratio entre 1.15 et 1.65, avec bandes sur les côtés)
                       // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
-                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.65 ? '#000' : 'transparent')
-                        : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1202,9 +1208,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.65 ? '#000' : 'transparent')
-                          : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
