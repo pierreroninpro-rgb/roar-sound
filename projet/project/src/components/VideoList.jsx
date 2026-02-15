@@ -617,34 +617,10 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // **NOUVEAU : Détecter mobile et déclencher fullscreen Vimeo**
+        // Mobile et desktop : même flux — plein écran immédiat au premier clic (pas d'attente du chargement Vimeo)
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
           (window.innerWidth <= 820);
 
-        if (isMobileDevice && videoRef.current && playerRef.current) {
-          try {
-            // Mobile : uniquement le plein écran natif Vimeo (pas notre overlay). Le close Vimeo ramène à la page.
-            await playerRef.current.requestFullscreen();
-            return;
-          } catch (err) {
-            console.error("Mobile Vimeo fullscreen error:", err);
-            try {
-              const iframe = videoRef.current;
-              if (iframe.requestFullscreen) {
-                await iframe.requestFullscreen();
-              } else if (iframe.webkitRequestFullscreen) {
-                await iframe.webkitRequestFullscreen();
-              } else if (iframe.mozRequestFullScreen) {
-                await iframe.mozRequestFullScreen();
-              }
-              return;
-            } catch (fallbackErr) {
-              console.error("Fallback fullscreen also failed:", fallbackErr);
-            }
-          }
-        }
-
-        // **Desktop : ton code actuel**
         const elementToFullscreen = document.documentElement;
 
         try {
