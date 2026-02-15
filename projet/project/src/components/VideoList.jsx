@@ -42,7 +42,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom "cover" 16:9 en mobile pour éviter les bandes noires
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
-  const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
+  const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay au changement de vidéo (mobile 450ms, desktop 700ms pour masquer bandes paysage→portrait)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
@@ -1923,10 +1923,11 @@ export default function VideoList({ onFullscreenChange }) {
                 setShowTransitionOverlay(true);
                 setSelectedVideo(video); // Nouvelle vidéo tout de suite pour qu’elle se charge sous l’overlay
                 if (transitionOverlayTimeoutRef.current) clearTimeout(transitionOverlayTimeoutRef.current);
+                const overlayDurationMs = spacing.isMobile ? 500 : 450; // Plus long en desktop pour masquer bandes noires au passage paysage → portrait
                 transitionOverlayTimeoutRef.current = setTimeout(() => {
                   setShowTransitionOverlay(false);
                   transitionOverlayTimeoutRef.current = null;
-                }, 450);
+                }, overlayDurationMs);
               }}
               selectedVideo={selectedVideo}
             />
