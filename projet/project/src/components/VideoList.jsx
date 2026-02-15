@@ -39,9 +39,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
-  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0, widthPx: null }); // widthPx = largeur visible en px (pour éligibilité bandes noires mobile)
-  const [mobileVideoContainerHeightPx, setMobileVideoContainerHeightPx] = useState(0); // Hauteur réelle du conteneur (mobile)
-  const [mobileVideoContainerWidthPx, setMobileVideoContainerWidthPx] = useState(0); // Largeur réelle (mobile) — pour calcul cover
+  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
@@ -435,7 +433,7 @@ export default function VideoList({ onFullscreenChange }) {
                       visibleWidth = cw;
                       leftOffset = 0;
                     }
-                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
+                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
                   }
                 });
               }
@@ -464,7 +462,7 @@ export default function VideoList({ onFullscreenChange }) {
                     visibleWidth = cw;
                     leftOffset = 0;
                   }
-                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
+                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
                 }
               });
             }
@@ -499,33 +497,22 @@ export default function VideoList({ onFullscreenChange }) {
     setIsSafariMobile(isIOS && !isChromeIOS);
   }, []);
 
-  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo + hauteur conteneur pour mode cover mobile (même rendu tous navigateurs)
+  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
   const calculateVisibleVideoDimensions = () => {
     if (!videoContainerRef.current || isFullscreen) {
-      setVisibleVideoDimensions({ width: '100%', leftOffset: 0, widthPx: null });
-      setMobileVideoContainerHeightPx(0);
-      setMobileVideoContainerWidthPx(0);
+      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
       return;
     }
 
     const containerWidth = videoContainerRef.current.offsetWidth;
     const containerHeight = videoContainerRef.current.offsetHeight;
-
-    // Mobile + paysage : mémoriser largeur et hauteur pour calcul "cover" (remplir tout le conteneur, léger zoom, même rendu Safari/Chrome/Ecosia)
-    if (spacing.isMobile && videoAspectRatio >= 1) {
-      setMobileVideoContainerHeightPx(containerHeight);
-      setMobileVideoContainerWidthPx(containerWidth);
-    } else {
-      setMobileVideoContainerHeightPx(0);
-      setMobileVideoContainerWidthPx(0);
-    }
     const containerRatio = containerWidth / containerHeight;
     const videoRatio = videoAspectRatio;
 
     let visibleWidth, leftOffset;
 
     if (containerRatio > videoRatio) {
-      // Container plus large que la vidéo -> bandes noires sur les côtés (pillarbox)
+      // Container plus large que la vidéo -> bandes noires sur les côtés
       visibleWidth = containerHeight * videoRatio;
       leftOffset = (containerWidth - visibleWidth) / 2;
     } else {
@@ -534,7 +521,7 @@ export default function VideoList({ onFullscreenChange }) {
       leftOffset = 0;
     }
 
-    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
+    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
   };
 
   // Recalculer les dimensions visibles quand le ratio ou la taille change
@@ -547,7 +534,7 @@ export default function VideoList({ onFullscreenChange }) {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, spacing.isMobile, isFullscreen]);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
@@ -617,9 +604,57 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // Mobile et desktop : même flux — plein écran immédiat au premier clic (pas d'attente du chargement Vimeo)
+        // Mobile : priorité au plein écran Vimeo (lecteur + interface Vimeo). Sinon desktop ou fallback.
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
           (window.innerWidth <= 820);
+
+        if (isMobileDevice && videoRef.current) {
+          // 1) API Player Vimeo si déjà prête
+          if (playerRef.current) {
+            try {
+              await playerRef.current.requestFullscreen();
+              return;
+            } catch (err) {
+              console.error("Mobile Vimeo fullscreen error:", err);
+            }
+          }
+          // 2) Sinon fullscreen de l’iframe (contenu Vimeo) même si le Player n’est pas encore prêt
+          try {
+            const iframe = videoRef.current;
+            if (iframe.requestFullscreen) {
+              await iframe.requestFullscreen();
+            } else if (iframe.webkitRequestFullscreen) {
+              await iframe.webkitRequestFullscreen();
+            } else if (iframe.mozRequestFullScreen) {
+              await iframe.mozRequestFullScreen();
+            } else if (iframe.msRequestFullscreen) {
+              await iframe.msRequestFullscreen();
+            } else {
+              throw new Error("No fullscreen method on iframe");
+            }
+            return;
+          } catch (fallbackErr) {
+            console.error("Mobile iframe fullscreen failed:", fallbackErr);
+          }
+        }
+
+        // **Desktop ou fallback mobile (si Vimeo a échoué) : plein écran via document**
+        // 1) Dimensions dès maintenant pour éviter un second reflow (flash) au passage fullscreen, surtout quand la vidéo est en pause.
+        const ratio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+        let iframeW, iframeH;
+        if (screenW / screenH > ratio) {
+          iframeH = screenH;
+          iframeW = screenH * ratio;
+        } else {
+          iframeW = screenW;
+          iframeH = screenW / ratio;
+        }
+        setFullscreenVideoDimensions({ width: `${iframeW}px`, height: `${iframeH}px` });
+        // 2) Mise à jour optimiste : overlay fullscreen tout de suite, pas après requestFullscreen().
+        setIsFullscreen(true);
+        if (onFullscreenChange) onFullscreenChange(true);
 
         const elementToFullscreen = document.documentElement;
 
@@ -643,23 +678,27 @@ export default function VideoList({ onFullscreenChange }) {
           }
         } catch (err) {
           console.log("Fullscreen request failed, trying without options:", err);
-          if (elementToFullscreen.requestFullscreen) {
-            await elementToFullscreen.requestFullscreen();
-          } else if (elementToFullscreen.webkitRequestFullscreen) {
-            if (Element && Element.ALLOW_KEYBOARD_INPUT) {
-              await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-            } else {
-              await elementToFullscreen.webkitRequestFullscreen();
+          try {
+            if (elementToFullscreen.requestFullscreen) {
+              await elementToFullscreen.requestFullscreen();
+            } else if (elementToFullscreen.webkitRequestFullscreen) {
+              if (Element && Element.ALLOW_KEYBOARD_INPUT) {
+                await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+              } else {
+                await elementToFullscreen.webkitRequestFullscreen();
+              }
+            } else if (elementToFullscreen.mozRequestFullScreen) {
+              await elementToFullscreen.mozRequestFullScreen();
+            } else if (elementToFullscreen.msRequestFullscreen) {
+              await elementToFullscreen.msRequestFullscreen();
             }
-          } else if (elementToFullscreen.mozRequestFullScreen) {
-            await elementToFullscreen.mozRequestFullScreen();
-          } else if (elementToFullscreen.msRequestFullscreen) {
-            await elementToFullscreen.msRequestFullscreen();
+          } catch (retryErr) {
+            // Échec définitif : revenir en mode normal
+            setIsFullscreen(false);
+            if (onFullscreenChange) onFullscreenChange(false);
+            return;
           }
         }
-
-        setIsFullscreen(true);
-        if (onFullscreenChange) onFullscreenChange(true);
 
         // Firefox a besoin d'un court délai pour finaliser le plein écran avant qu'on calcule les dimensions (évite la barre noire en haut)
         const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
@@ -1159,8 +1198,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Même logique mobile et desktop : portrait = transparent, paysage = noir ; en mobile uniquement quand il y a des bandes sur les côtés (leftOffset > 0)
-                      backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
+                      // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1188,45 +1227,16 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
-                        ...(!isFullscreen && (spacing.isMobile && videoAspectRatio >= 1
-                          ? (mobileVideoContainerHeightPx && mobileVideoContainerWidthPx
-                              ? (() => {
-                                  // Cover : remplir tout le conteneur (aucune bande), overflow centré et masqué — même rendu Safari/Chrome/Ecosia
-                                  const coverW = Math.max(mobileVideoContainerWidthPx, mobileVideoContainerHeightPx * videoAspectRatio);
-                                  const coverH = Math.max(mobileVideoContainerHeightPx, mobileVideoContainerWidthPx / videoAspectRatio);
-                                  return {
-                                    width: `${coverW}px`,
-                                    height: `${coverH}px`,
-                                    maxWidth: 'none',
-                                    position: 'absolute',
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    flexShrink: 0
-                                  };
-                                })()
-                              : {
-                                  height: '100%',
-                                  width: 'auto',
-                                  maxWidth: 'none',
-                                  aspectRatio: videoAspectRatio,
-                                  position: 'absolute',
-                                  left: '50%',
-                                  top: 0,
-                                  transform: 'translateX(-50%)',
-                                  flexShrink: 0
-                                })
-                          : {
-                              width: '100%',
-                              maxWidth: '100%',
-                              height: 'auto',
-                              maxHeight: '100%',
-                              aspectRatio: videoAspectRatio,
-                              position: 'relative',
-                              flexShrink: 0
-                            }
-                        )),
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
+                        ...(!isFullscreen && {
+                          width: '100%',
+                          maxWidth: '100%',
+                          height: 'auto',
+                          maxHeight: '100%',
+                          aspectRatio: videoAspectRatio,
+                          position: 'relative',
+                          flexShrink: 0
+                        }),
                         ...(isFullscreen && {
                           width: '100%',
                           height: '100%',
@@ -1445,7 +1455,7 @@ export default function VideoList({ onFullscreenChange }) {
                         style={{
                           padding: spacing.isMobile
                             ? undefined
-                            : (visibleVideoDimensions.leftOffset === 0 ? '0.1rem 1rem' : '0.1rem 0.75rem'),
+                            : '0.1rem 0.75rem',
                           paddingTop: spacing.isMobile ? '0.1rem' : undefined,
                           paddingBottom: 'calc(0.1rem + 4px)',
                           paddingLeft: spacing.isMobile
@@ -1460,14 +1470,12 @@ export default function VideoList({ onFullscreenChange }) {
                             : undefined,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : (visibleVideoDimensions.leftOffset === 0 ? '1rem' : '0.5rem'),
+                          gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : '0.5rem',
                           justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          ...(!spacing.isMobile && visibleVideoDimensions.leftOffset === 0
-                            ? { left: 0, right: 0 }
-                            : { left: `${visibleVideoDimensions.leftOffset}px`, width: visibleVideoDimensions.width }
-                          ),
+                          left: `${visibleVideoDimensions.leftOffset}px`,
+                          width: visibleVideoDimensions.width,
                           ...(spacing.isMobile && {
                             ...(visibleVideoDimensions.leftOffset > 0
                               ? { overflow: 'hidden' }
@@ -1688,10 +1696,10 @@ export default function VideoList({ onFullscreenChange }) {
                               />
                             </div>
 
-                            {/* Barre de progression - desktop : design d'origine (ton code) pour vidéos paysage max ; rétrécissable pour vidéos moins larges */}
+                            {/* Barre de progression - desktop */}
                             <div
                               className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                              style={spacing.isMobile ? undefined : (visibleVideoDimensions.leftOffset === 0 ? undefined : { minWidth: 0, flex: '1 1 0%' })}
+                              style={spacing.isMobile ? undefined : { minWidth: '100px' }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
                                 e.stopPropagation();
