@@ -536,17 +536,35 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Recalculer les dimensions visibles quand le ratio ou la taille change
+  // Recalculer les dimensions visibles + zoom 16:9 mobile (et après layout pour éviter bandes noires au 1er chargement)
   useEffect(() => {
     calculateVisibleVideoDimensions();
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        calculateVisibleVideoDimensions();
+      });
+    });
 
     const handleResize = () => {
       calculateVisibleVideoDimensions();
     };
 
+    let resizeObserver = null;
+    const el = videoContainerRef.current;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        calculateVisibleVideoDimensions();
+      });
+      resizeObserver.observe(el);
+    }
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, spacing.isMobile, isFullscreen]);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, spacing.isMobile, isFullscreen, selectedVideo?.id]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
