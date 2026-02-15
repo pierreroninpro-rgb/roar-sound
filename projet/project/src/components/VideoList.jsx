@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import Player from "@vimeo/player";
 import Carousel from "./Carrousel.jsx";
@@ -40,6 +39,10 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
+  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
+  const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
+  const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
+  const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
@@ -49,6 +52,7 @@ export default function VideoList({ onFullscreenChange }) {
   const progressBarFullscreenRef = useRef(null); // Référence pour la barre de progression (plein écran)
   const isDraggingProgress = useRef(false); // État pour le drag du curseur de progression
   const seekedFromTouchRef = useRef(false); // Évite double seek (touchEnd + click) sur barre
+  const playPauseHandledByTouchRef = useRef(false); // Évite double play/pause (touch puis click synthétique) sur mobile
   const justFinishedDragRef = useRef(false); // Évite seek au click après un drag (release sur la barre)
   const durationRef = useRef(0); // Cache durée pour drag fluide (éviter await à chaque move)
   const lastSetCurrentTimeRef = useRef(0); // Throttle setCurrentTime pendant le drag
@@ -332,12 +336,12 @@ export default function VideoList({ onFullscreenChange }) {
     fetchVideos();
   }, []);
 
-  // Initialize Vimeo Player when video changes
+  // Initialize Vimeo Player when video changes — Vimeo = source de vérité, on écoute les événements
   useEffect(() => {
     if (videoRef.current && selectedVideo) {
-      // Réinitialiser la progression à 0 dès le changement de vidéo
       setProgress(0);
       progressRef.current = 0;
+      setVideoAspectRatio(16 / 9);
 
       if (playerRef.current) {
         try {
@@ -350,11 +354,27 @@ export default function VideoList({ onFullscreenChange }) {
       setTimeout(async () => {
         if (videoRef.current) {
           playerRef.current = new Player(videoRef.current);
-          setIsPlaying(false);
 
-          // Listen to timeupdate events for progress
+          // ——— Événements Vimeo : on met à jour l'UI uniquement ———
+          playerRef.current.on("play", () => {
+            setIsPlaying(true);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            if (window.innerWidth > 820) {
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+              }, 3000);
+            }
+          });
+          playerRef.current.on("pause", () => {
+            setIsPlaying(false);
+            setShowControls(true);
+          });
+          playerRef.current.on("ended", () => {
+            setIsPlaying(false);
+            setShowControls(true);
+          });
           playerRef.current.on("timeupdate", async (data) => {
-            if (isDraggingProgress.current) return; // Pendant le drag : on garde la position locale, pas de saccade
+            if (isDraggingProgress.current) return;
             try {
               const duration = await playerRef.current.getDuration();
               if (duration && duration > 0) {
@@ -367,55 +387,89 @@ export default function VideoList({ onFullscreenChange }) {
               console.error("Error updating progress:", err);
             }
           });
-
-          // Listen to play/pause events
-          playerRef.current.on("play", () => {
-            setIsPlaying(true);
-            // Masquer les contrôles après 3 secondes seulement si on ne survole pas
-            if (controlsTimeoutRef.current) {
-              clearTimeout(controlsTimeoutRef.current);
-            }
-            if (!isHovering) {
-              controlsTimeoutRef.current = setTimeout(() => {
-                if (!isHovering) {
-                  setShowControls(false);
-                }
-              }, 3000);
+          playerRef.current.on("volumechange", async () => {
+            try {
+              const muted = await playerRef.current.getMuted();
+              const volume = await playerRef.current.getVolume();
+              setIsMuted(muted || volume === 0);
+            } catch (err) {
+              console.error("Error getting volume:", err);
             }
           });
-          playerRef.current.on("pause", () => {
-            setIsPlaying(false);
-            // Garder les contrôles visibles quand on pause
-            setShowControls(true);
-          });
-          playerRef.current.on("ended", () => {
-            setIsPlaying(false); // Réafficher le bouton play quand la vidéo est finie
-            setShowControls(true); // Afficher les contrôles à la fin
+
+          // ——— Config initiale : mobile = préparer le son au chargement ———
+          playerRef.current.on("loaded", async () => {
+            if (window.innerWidth <= 820) {
+              try {
+                await playerRef.current.setVolume(1);
+                await playerRef.current.setMuted(false);
+              } catch (err) {
+                console.log("Could not prepare audio on load:", err);
+              }
+            }
+            try {
+              const muted = await playerRef.current.getMuted();
+              const volume = await playerRef.current.getVolume();
+              setIsMuted(muted || volume === 0);
+            } catch (_) { }
+            try {
+              const videoWidth = await playerRef.current.getVideoWidth();
+              const videoHeight = await playerRef.current.getVideoHeight();
+              if (videoWidth && videoHeight) {
+                const aspectRatio = videoWidth / videoHeight;
+                setVideoAspectRatio(aspectRatio);
+                // Recalculer la largeur visible pour la navbar (après un court délai pour que le DOM soit à jour)
+                requestAnimationFrame(() => {
+                  if (videoContainerRef.current) {
+                    const cw = videoContainerRef.current.offsetWidth;
+                    const ch = videoContainerRef.current.offsetHeight;
+                    const containerRatio = cw / ch;
+                    const vr = aspectRatio;
+                    let visibleWidth, leftOffset;
+                    if (containerRatio > vr) {
+                      visibleWidth = ch * vr;
+                      leftOffset = (cw - visibleWidth) / 2;
+                    } else {
+                      visibleWidth = cw;
+                      leftOffset = 0;
+                    }
+                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                  }
+                });
+              }
+            } catch (_) {
+              setVideoAspectRatio(16 / 9);
+            }
           });
 
-          // Vérifier l'état initial du volume
-          try {
-            const volume = await playerRef.current.getVolume();
-            const muted = await playerRef.current.getMuted();
-            setIsMuted(muted || volume === 0);
-          } catch (err) {
-            console.error("Error getting volume:", err);
-          }
-
-          // Détecter l'orientation de la vidéo via l'API Vimeo
           try {
             const videoWidth = await playerRef.current.getVideoWidth();
             const videoHeight = await playerRef.current.getVideoHeight();
             if (videoWidth && videoHeight) {
               const aspectRatio = videoWidth / videoHeight;
               setVideoAspectRatio(aspectRatio);
-              console.log(`Video aspect ratio detected: ${aspectRatio.toFixed(2)} (${videoWidth}x${videoHeight})`);
+              requestAnimationFrame(() => {
+                if (videoContainerRef.current) {
+                  const cw = videoContainerRef.current.offsetWidth;
+                  const ch = videoContainerRef.current.offsetHeight;
+                  const containerRatio = cw / ch;
+                  const vr = aspectRatio;
+                  let visibleWidth, leftOffset;
+                  if (containerRatio > vr) {
+                    visibleWidth = ch * vr;
+                    leftOffset = (cw - visibleWidth) / 2;
+                  } else {
+                    visibleWidth = cw;
+                    leftOffset = 0;
+                  }
+                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                }
+              });
             }
-          } catch (err) {
-            console.error("Error getting video dimensions:", err);
-            // Par défaut, supposer format paysage (16:9)
-            setVideoAspectRatio(16 / 9);
-          }
+          } catch (_) { }
+
+          setIsPlaying(false);
+          setShowControls(true);
         }
       }, 100);
     }
@@ -436,47 +490,89 @@ export default function VideoList({ onFullscreenChange }) {
     videoAspectRatioRef.current = videoAspectRatio;
   }, [videoAspectRatio]);
 
-  const handlePlayPause = async () => {
-    if (!playerRef.current) return;
+  // Détecter Safari ou Ecosia sur iOS uniquement (pas Chrome : CriOS) pour réduire la barre en mobile
+  useEffect(() => {
+    const isIOS = /iP(ad|hone|od)/i.test(navigator.userAgent);
+    const isChromeIOS = navigator.userAgent.includes('CriOS');
+    setIsSafariMobile(isIOS && !isChromeIOS);
+  }, []);
 
-    // Afficher les contrôles
+  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
+  const calculateVisibleVideoDimensions = () => {
+    if (!videoContainerRef.current || isFullscreen) {
+      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
+      return;
+    }
+
+    const containerWidth = videoContainerRef.current.offsetWidth;
+    const containerHeight = videoContainerRef.current.offsetHeight;
+    const containerRatio = containerWidth / containerHeight;
+    const videoRatio = videoAspectRatio;
+
+    let visibleWidth, leftOffset;
+
+    if (containerRatio > videoRatio) {
+      // Container plus large que la vidéo -> bandes noires sur les côtés
+      visibleWidth = containerHeight * videoRatio;
+      leftOffset = (containerWidth - visibleWidth) / 2;
+    } else {
+      // Container plus haut que la vidéo ou ratio identique -> pas de bandes sur les côtés
+      visibleWidth = containerWidth;
+      leftOffset = 0;
+    }
+
+    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+  };
+
+  // Recalculer les dimensions visibles quand le ratio ou la taille change
+  useEffect(() => {
+    calculateVisibleVideoDimensions();
+
+    const handleResize = () => {
+      calculateVisibleVideoDimensions();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
+
+  // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
+  // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
+  const togglePlayPause = async () => {
+    if (!playerRef.current) return;
     setShowControls(true);
     setIsHovering(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    const isMobileDevice = window.innerWidth <= 820;
     try {
-      if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
-        setShowControls(true);
+      if (isMobileDevice) {
+        // Mobile : décision immédiate sur isPlaying (pas d'await getPaused) pour que play() reste dans le même geste que le tap → 1 tap suffit.
+        if (isPlaying) {
+          await playerRef.current.pause();
+        } else {
+          await playerRef.current.play();
+          // 50ms après le play : activer le son.
+          setTimeout(() => {
+            if (playerRef.current) {
+              playerRef.current.setVolume(1);
+              playerRef.current.setMuted(false);
+            }
+          }, 50);
+        }
       } else {
-        // Sur mobile, activer le son AVANT de jouer pour éviter le double clic
-        const isMobileDevice = window.innerWidth <= 820;
-        if (isMobileDevice) {
-          await activateSoundOnMobile();
+        const paused = await playerRef.current.getPaused();
+        if (paused) {
+          await playerRef.current.play();
+        } else {
+          await playerRef.current.pause();
         }
-        
-        await playerRef.current.play();
-        setIsPlaying(true);
-        
-        // Si pas mobile, activer le son après
-        if (!isMobileDevice) {
-          await activateSoundOnMobile();
-        }
-
-        controlsTimeoutRef.current = setTimeout(() => {
-          if (!isHovering) {
-            setShowControls(false);
-          }
-        }, 3000);
       }
     } catch (err) {
-      console.error("Error controlling video:", err);
-      setIsPlaying(false);
+      console.error("Error toggling play/pause:", err);
     }
   };
+
+  const handlePlayPause = () => togglePlayPause();
 
 
   const handleFullscreen = async () => {
@@ -535,7 +631,24 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop : ton code actuel**
+        // **Desktop ou fallback mobile : plein écran via document**
+        // 1) Dimensions dès maintenant pour éviter un second reflow (flash) au passage fullscreen, surtout quand la vidéo est en pause.
+        const ratio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+        let iframeW, iframeH;
+        if (screenW / screenH > ratio) {
+          iframeH = screenH;
+          iframeW = screenH * ratio;
+        } else {
+          iframeW = screenW;
+          iframeH = screenW / ratio;
+        }
+        setFullscreenVideoDimensions({ width: `${iframeW}px`, height: `${iframeH}px` });
+        // 2) Mise à jour optimiste : overlay fullscreen tout de suite, pas après requestFullscreen().
+        setIsFullscreen(true);
+        if (onFullscreenChange) onFullscreenChange(true);
+
         const elementToFullscreen = document.documentElement;
 
         try {
@@ -558,38 +671,38 @@ export default function VideoList({ onFullscreenChange }) {
           }
         } catch (err) {
           console.log("Fullscreen request failed, trying without options:", err);
-          if (elementToFullscreen.requestFullscreen) {
-            await elementToFullscreen.requestFullscreen();
-          } else if (elementToFullscreen.webkitRequestFullscreen) {
-            if (Element && Element.ALLOW_KEYBOARD_INPUT) {
-              await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-            } else {
-              await elementToFullscreen.webkitRequestFullscreen();
+          try {
+            if (elementToFullscreen.requestFullscreen) {
+              await elementToFullscreen.requestFullscreen();
+            } else if (elementToFullscreen.webkitRequestFullscreen) {
+              if (Element && Element.ALLOW_KEYBOARD_INPUT) {
+                await elementToFullscreen.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+              } else {
+                await elementToFullscreen.webkitRequestFullscreen();
+              }
+            } else if (elementToFullscreen.mozRequestFullScreen) {
+              await elementToFullscreen.mozRequestFullScreen();
+            } else if (elementToFullscreen.msRequestFullscreen) {
+              await elementToFullscreen.msRequestFullscreen();
             }
-          } else if (elementToFullscreen.mozRequestFullScreen) {
-            await elementToFullscreen.mozRequestFullScreen();
-          } else if (elementToFullscreen.msRequestFullscreen) {
-            await elementToFullscreen.msRequestFullscreen();
+          } catch (retryErr) {
+            // Échec définitif : revenir en mode normal
+            setIsFullscreen(false);
+            if (onFullscreenChange) onFullscreenChange(false);
+            return;
           }
         }
 
-        setIsFullscreen(true);
-        if (onFullscreenChange) onFullscreenChange(true);
+        // Firefox a besoin d'un court délai pour finaliser le plein écran avant qu'on calcule les dimensions (évite la barre noire en haut)
+        const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+        await new Promise((r) => setTimeout(r, isFirefox ? 150 : 100));
 
-        // Reste du code pour desktop (orientation lock, etc.)
-        try {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (orientationErr) {
-          console.log("Screen Orientation API not available:", orientationErr);
-        }
-
-        // Calculer les dimensions pour letterboxing (ratio de la vidéo sélectionnée)
+        // Calculer les dimensions APRÈS le délai pour que Firefox ait le temps de finaliser la transition
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatio;
+        const aspectRatio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
 
         let iframeWidth, iframeHeight;
-
         if (screenWidth / screenHeight > aspectRatio) {
           iframeHeight = screenHeight;
           iframeWidth = screenHeight * aspectRatio;
@@ -597,7 +710,6 @@ export default function VideoList({ onFullscreenChange }) {
           iframeWidth = screenWidth;
           iframeHeight = screenWidth / aspectRatio;
         }
-
         setFullscreenVideoDimensions({
           width: `${iframeWidth}px`,
           height: `${iframeHeight}px`
@@ -627,10 +739,9 @@ export default function VideoList({ onFullscreenChange }) {
       if (isCurrentlyFullscreen && isOurFullscreen) {
         setShowControls(true);
         setIsHovering(true);
-        // Calculer les dimensions pour letterboxing (ratio de la vidéo, via ref pour valeur à jour)
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const aspectRatio = videoAspectRatioRef.current;
+        const aspectRatio = videoAspectRatioRef.current || 16 / 9;
 
         let iframeWidth, iframeHeight;
 
@@ -682,33 +793,7 @@ export default function VideoList({ onFullscreenChange }) {
         return;
       }
 
-      // Toggle play/pause
-      if (playerRef.current) {
-        setShowControls(true);
-        setIsHovering(true);
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
-
-        try {
-          if (isPlaying) {
-            await playerRef.current.pause();
-            setIsPlaying(false);
-            setShowControls(true);
-          } else {
-            await playerRef.current.play();
-            setIsPlaying(true);
-            // Activer le son en mobile après l'interaction utilisateur
-            await activateSoundOnMobile();
-            controlsTimeoutRef.current = setTimeout(() => {
-              setIsHovering(false);
-              setShowControls(false);
-            }, 3000);
-          }
-        } catch (err) {
-          console.error("Error toggling play/pause:", err);
-        }
-      }
+      if (playerRef.current) await togglePlayPause();
     };
 
     // Gérer les mouvements de souris en mode plein écran
@@ -818,80 +903,16 @@ export default function VideoList({ onFullscreenChange }) {
     }
   };
 
-  // Fonction helper pour activer le son en mobile après une interaction utilisateur
-  const activateSoundOnMobile = async () => {
-    const isMobileDevice = window.innerWidth <= 820;
-    if (isMobileDevice && playerRef.current) {
-      try {
-        await playerRef.current.setMuted(false);
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } catch (err) {
-        console.error("Error unmuting video:", err);
-      }
-    }
-  };
+  const handleVideoClick = () => togglePlayPause();
 
-  // Gérer le clic sur l'écran pour play/pause
-  const handleVideoClick = async () => {
-    if (!playerRef.current) return;
-
-    // Afficher les contrôles au clic
-    setShowControls(true);
-    setIsHovering(true);
-
-    // Annuler le timeout précédent si il existe
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
-    try {
-      if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
-        // Si on met en pause, garder les contrôles visibles
-        setShowControls(true);
-      } else {
-        await playerRef.current.play();
-        setIsPlaying(true);
-        // Activer le son en mobile après l'interaction utilisateur
-        await activateSoundOnMobile();
-
-        // Si on joue, masquer les contrôles après 3 secondes seulement si on ne survole pas
-        if (!isHovering) {
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false);
-          }, 3000);
-        }
-      }
-    } catch (err) {
-      console.error("Error toggling play/pause:", err);
-    }
-  };
-
-  // Gérer le toggle du son
   const handleToggleMute = async (e) => {
     e?.stopPropagation();
     if (!playerRef.current) return;
-
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     try {
-      if (isMuted) {
-        await playerRef.current.setVolume(1);
-        setIsMuted(false);
-      } else {
-        await playerRef.current.setVolume(0);
-        setIsMuted(true);
-      }
-      // Réafficher les contrôles quand on change le son
-      setShowControls(true);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-      if (isPlaying) {
-        controlsTimeoutRef.current = setTimeout(() => {
-          setShowControls(false);
-        }, 3000);
-      }
+      const currentlyMuted = await playerRef.current.getMuted();
+      await playerRef.current.setMuted(!currentlyMuted);
     } catch (err) {
       console.error("Error toggling mute:", err);
     }
@@ -1056,6 +1077,9 @@ export default function VideoList({ onFullscreenChange }) {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
+      if (transitionOverlayTimeoutRef.current) {
+        clearTimeout(transitionOverlayTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -1137,6 +1161,21 @@ export default function VideoList({ onFullscreenChange }) {
             >
               {selectedVideo && selectedVideo.url ? (
                 <>
+                  {/* Overlay fond page 0.3s au changement de vidéo pour masquer la transition paysage/portrait */}
+                  {showTransitionOverlay && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: isFullscreen ? '#000' : '#F6F6F6',
+                        zIndex: 100,
+                        pointerEvents: 'none' // Laisse passer les touches (fix Safari mobile) — masque visuel uniquement
+                      }}
+                    />
+                  )}
                   <div
                     ref={videoContainerRef}
                     className="overflow-hidden roar-blue relative w-full cursor-pointer"
@@ -1152,7 +1191,8 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      backgroundColor: '#000', // Noir partout : bandes letterbox noires (pas de bords blancs)
+                      // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
+                      backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1180,7 +1220,7 @@ export default function VideoList({ onFullscreenChange }) {
                   >
                     <div
                       style={{
-                        backgroundColor: '#000', // Bande noire si la vidéo a des bords blancs ou letterbox
+                        backgroundColor: isFullscreen ? '#000' : (spacing.isMobile ? 'transparent' : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
                           maxWidth: '100%',
@@ -1202,7 +1242,7 @@ export default function VideoList({ onFullscreenChange }) {
                       <iframe
                         ref={videoRef}
                         key={selectedVideo.id}
-                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&controls=0&responsive=1&transparent=0`}
+                        src={`${selectedVideo.url}?autoplay=0&loop=1&muted=0&responsive=1&transparent=1&controls=0`}
                         style={{
                           zIndex: 1,
                           pointerEvents: 'auto',
@@ -1228,28 +1268,25 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Overlay transparent pour capturer les clics sur la vidéo */}
+                    {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l'interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
                     <div
                       onClick={async (e) => {
-                        // Ne pas capturer les clics sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        // Ne déclencher que si on clique directement sur l'overlay (pas sur les enfants)
-                        if (e.target === e.currentTarget) {
+                        if (e.target.closest('[data-navbar]')) return;
+                        if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                        const onMobile = window.innerWidth <= 820;
+                        if (onMobile || e.target === e.currentTarget) {
                           e.preventDefault();
                           await handlePlayPause();
                         }
                       }}
-                      onTouchStart={async (e) => {
-                        // Ne pas capturer les touches sur les éléments interactifs
-                        if (e.target.closest('[data-navbar]') || e.target.closest('img')) {
-                          return;
-                        }
-                        if (e.target === e.currentTarget) {
-                          e.preventDefault();
-                          await handlePlayPause();
-                        }
+                      onTouchEnd={async (e) => {
+                        if (e.target.closest('[data-navbar]')) return;
+                        const onMobile = window.innerWidth <= 820;
+                        if (!onMobile && e.target !== e.currentTarget) return;
+                        e.preventDefault();
+                        if (onMobile) playPauseHandledByTouchRef.current = true;
+                        await handlePlayPause();
+                        if (onMobile) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
                       }}
                       style={{
                         position: 'absolute',
@@ -1257,7 +1294,7 @@ export default function VideoList({ onFullscreenChange }) {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        zIndex: 10, // Au-dessus de l'iframe mais en-dessous des contrôles fullscreen
+                        zIndex: 10,
                         pointerEvents: 'auto',
                         cursor: 'pointer',
                         backgroundColor: 'transparent'
@@ -1280,7 +1317,7 @@ export default function VideoList({ onFullscreenChange }) {
                           justifyContent: 'space-between'
                         }}
                       >
-                        {/* Bouton fermer en haut à droite - même visibilité que la barre des contrôles (masquage après ~3 s sans mouvement) */}
+                        {/* Bouton fermer en haut à droite - desktop : toujours visible ; mobile : masquage après ~3 s sans mouvement */}
                         <button
                           data-fullscreen-close
                           onClick={(e) => {
@@ -1292,7 +1329,7 @@ export default function VideoList({ onFullscreenChange }) {
                             setShowControls(true);
                             setIsHovering(true);
                           }}
-                          className={(!isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
+                          className={(!spacing.isMobile || !isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
                           style={{
                             position: 'absolute',
                             top: '1rem',
@@ -1314,10 +1351,10 @@ export default function VideoList({ onFullscreenChange }) {
                             style={{ display: 'block' }}
                           />
                         </button>
-                        {/* Barre des contrôles en bas */}
+                        {/* Barre des contrôles en bas - desktop : toujours visible ; mobile : masquage après ~3 s */}
                         <div
                           data-fullscreen-navbar
-                          className={(!isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
+                          className={(!spacing.isMobile || !isPlaying || showControls || isHovering) ? 'opacity-100' : 'opacity-0'}
                           style={{
                             position: 'absolute',
                             bottom: 0,
@@ -1403,21 +1440,41 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
 
-                    {/* Navbar en bas - Mode normal */}
+                    {/* Navbar en bas - Mode normal : largeur = largeur visible de la vidéo (mobile + desktop) */}
                     {!isFullscreen && (
                       <div
                         data-navbar
                         className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
-                          padding: '0.1rem 1rem',
+                          padding: spacing.isMobile
+                            ? undefined
+                            : '0.1rem 0.75rem',
+                          paddingTop: spacing.isMobile ? '0.1rem' : undefined,
                           paddingBottom: 'calc(0.1rem + 4px)',
+                          paddingLeft: spacing.isMobile
+                            ? (visibleVideoDimensions.leftOffset > 0
+                              ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-left, 0px))')
+                              : 'max(1rem, env(safe-area-inset-left, 0px))')
+                            : undefined,
+                          paddingRight: spacing.isMobile
+                            ? (visibleVideoDimensions.leftOffset > 0
+                              ? (isSafariMobile ? '3px' : 'max(3px, env(safe-area-inset-right, 0px))')
+                              : 'max(1rem, env(safe-area-inset-right, 0px))')
+                            : undefined,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '1rem',
+                          gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : '0.5rem',
+                          justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
-                          left: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
-                          right: spacing.isMobile ? `${spacing.horizontalMargin}px` : '0',
+                          left: `${visibleVideoDimensions.leftOffset}px`,
+                          width: visibleVideoDimensions.width,
+                          ...(spacing.isMobile && {
+                            ...(visibleVideoDimensions.leftOffset > 0
+                              ? { overflow: 'hidden' }
+                              : { overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }
+                            )
+                          }),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20, // Z-index élevé pour être au-dessus de l'overlay
                           pointerEvents: 'auto',
@@ -1434,121 +1491,302 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Icône PAUSE/PLAY */}
-                        <div
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            await handlePlayPause();
-                          }}
-                          onTouchStart={async (e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            await handlePlayPause();
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <img
-                            src={isPlaying ? '/images/pause.png' : '/images/play.png'}
-                            alt={isPlaying ? 'Pause' : 'Play'}
-                            style={{
-                              width: '20px',
-                              height: '20px'
-                            }}
-                          />
-                        </div>
-
-                        {/* Barre de progression */}
-                        <div
-                          className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
-                          onClick={async (e) => {
-                            if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
-                            e.stopPropagation();
-                            seekedFromTouchRef.current = false;
-                            await seekBarAtClientX(e.clientX, progressBarRef.current);
-                          }}
-                          onTouchEnd={(e) => {
-                            if (isDraggingProgressState || justFinishedDragRef.current) return;
-                            if (!e.changedTouches?.length) return;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            seekedFromTouchRef.current = true;
-                            seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
-                            setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
-                          }}
-                        >
+                        {/* Wrapper mobile : vidéo étroite = space-between + décalage à gauche pour tout voir */}
+                        {spacing.isMobile ? (
                           <div
-                            ref={progressBarRef}
-                            className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem',
+                              minWidth: visibleVideoDimensions.leftOffset > 0 ? 0 : 'min-content',
+                              flex: '1 1 auto',
+                              minHeight: '32px',
+                              width: '100%',
+                              ...(visibleVideoDimensions.leftOffset > 0 && {
+                                justifyContent: 'space-between',
+                                marginLeft: isSafariMobile ? '-4px' : '-6px'
+                              })
+                            }}
                           >
+                            {/* Icône PAUSE/PLAY - mobile : en vidéo étroite 10% plus petit */}
                             <div
-                              className="absolute top-0 left-0 h-full bg-white rounded-full"
-                              style={{
-                                width: `${progress}%`,
-                                transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                                await handlePlayPause();
                               }}
-                            />
+                              onTouchEnd={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                                await handlePlayPause();
+                                if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28
+                              }}
+                            >
+                              <img
+                                src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                                alt={isPlaying ? 'Pause' : 'Play'}
+                                style={{
+                                  width: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                  height: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }}
+                              />
+                            </div>
+
+                            {/* Barre de progression - mobile : en vidéo étroite encore 10% plus petite ; Safari iOS : -15% de plus */}
+                            <div
+                              className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
+                              style={{
+                                minWidth: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 47 : 63) : 0,
+                                flex: '1 1 0%',
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 14 : 20) : 32
+                              }}
+                              onClick={async (e) => {
+                                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = false;
+                                await seekBarAtClientX(e.clientX, progressBarRef.current);
+                              }}
+                              onTouchEnd={(e) => {
+                                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                                if (!e.changedTouches?.length) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = true;
+                                seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
+                              }}
+                            >
+                              <div
+                                ref={progressBarRef}
+                                className={`relative w-full bg-gray-600 rounded-full overflow-visible ${visibleVideoDimensions.leftOffset <= 0 ? 'h-1' : ''}`}
+                                style={visibleVideoDimensions.leftOffset > 0 ? { height: isSafariMobile ? '1.83px' : '2.52px' } : undefined}
+                              >
+                                <div
+                                  className="absolute top-0 left-0 h-full bg-white rounded-full"
+                                  style={{
+                                    width: `${progress}%`,
+                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Icône MUTE/UNMUTE - mobile : affichée uniquement quand la vidéo est large (pas de bandes sur les côtés) */}
+                            {visibleVideoDimensions.leftOffset === 0 && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleMute(e);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleToggleMute(e);
+                                }}
+                                style={{
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  width: '36px',
+                                  height: '36px',
+                                  minWidth: '36px',
+                                  minHeight: '36px'
+                                }}
+                              >
+                                <img
+                                  src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                                  alt={isMuted ? 'Unmute' : 'Mute'}
+                                  style={{ width: '36px', height: '36px', objectFit: 'contain', display: 'block' }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Bouton Fullscreen - mobile : en vidéo étroite 10% plus petit */}
+                            {!isFullscreen && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                className="bg-transparent border-none cursor-pointer flex items-center justify-center"
+                                style={{
+                                  pointerEvents: 'auto',
+                                  padding: '0.25rem',
+                                  flexShrink: 0,
+                                  width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                  height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
+                                  minWidth: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
+                                  minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28
+                                }}
+                              >
+                                <img
+                                  src="/images/open.png"
+                                  alt="Plein écran"
+                                  style={{
+                                    width: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                    height: visibleVideoDimensions.leftOffset > 0 ? '18px' : '20px',
+                                    objectFit: 'contain',
+                                    display: 'block'
+                                  }}
+                                />
+                              </button>
+                            )}
                           </div>
-                        </div>
-
-                        {/* Icône MUTE/UNMUTE */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleMute(e);
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <img
-                            src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
-                            alt={isMuted ? 'Unmute' : 'Mute'}
-                            style={{
-                              width: '36px',
-                              height: '36px'
-                            }}
-                          />
-                        </div>
-
-                        {/* Bouton Fullscreen - Masqué en plein écran mobile natif */}
-                        {!(spacing.isMobile && isFullscreen) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFullscreen();
-                            }}
-                            className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
-                            style={{
-                              pointerEvents: 'auto',
-                              padding: '0.25rem'
-                            }}
-                          >
-                            <img
-                              src="/images/open.png"
-                              alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-                              style={{
-                                display: 'block',
-                                width: `${spacing.openIconWidth}px`,
-                                height: `${spacing.openIconHeight}px`,
-                                marginBottom: spacing.isMobile ? '3px' : '0'
+                        ) : (
+                          <>
+                            {/* Icône PAUSE/PLAY - desktop : inchangé */}
+                            <div
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820 && playPauseHandledByTouchRef.current) return;
+                                await handlePlayPause();
                               }}
-                            />
-                          </button>
+                              onTouchEnd={async (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.innerWidth <= 820) playPauseHandledByTouchRef.current = true;
+                                await handlePlayPause();
+                                if (window.innerWidth <= 820) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <img
+                                src={isPlaying ? '/images/pause.png' : '/images/play.png'}
+                                alt={isPlaying ? 'Pause' : 'Play'}
+                                style={{
+                                  width: '20px',
+                                  height: '20px'
+                                }}
+                              />
+                            </div>
+
+                            {/* Barre de progression - desktop */}
+                            <div
+                              className="relative flex-1 flex items-center min-h-[32px] cursor-pointer rounded-full overflow-visible"
+                              style={spacing.isMobile ? undefined : { minWidth: '100px' }}
+                              onClick={async (e) => {
+                                if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = false;
+                                await seekBarAtClientX(e.clientX, progressBarRef.current);
+                              }}
+                              onTouchEnd={(e) => {
+                                if (isDraggingProgressState || justFinishedDragRef.current) return;
+                                if (!e.changedTouches?.length) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seekedFromTouchRef.current = true;
+                                seekBarAtClientX(e.changedTouches[0].clientX, progressBarRef.current);
+                                setTimeout(() => { seekedFromTouchRef.current = false; }, 400);
+                              }}
+                            >
+                              <div
+                                ref={progressBarRef}
+                                className="relative w-full h-1 bg-gray-600 rounded-full overflow-visible"
+                              >
+                                <div
+                                  className="absolute top-0 left-0 h-full bg-white rounded-full"
+                                  style={{
+                                    width: `${progress}%`,
+                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Icône MUTE/UNMUTE - desktop : inchangé */}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleMute(e);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleToggleMute(e);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <img
+                                src={isMuted ? '/images/soundoff.png' : '/images/soundon.png'}
+                                alt={isMuted ? 'Unmute' : 'Mute'}
+                                style={{
+                                  width: '36px',
+                                  height: '36px'
+                                }}
+                              />
+                            </div>
+
+                            {/* Bouton Fullscreen - desktop */}
+                            {!(spacing.isMobile && isFullscreen) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleFullscreen();
+                                }}
+                                className="bg-transparent border-none cursor-pointer flex items-center justify-center flex-shrink-0"
+                                style={{
+                                  pointerEvents: 'auto',
+                                  padding: '0.25rem'
+                                }}
+                              >
+                                <img
+                                  src="/images/open.png"
+                                  alt={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+                                  style={{
+                                    display: 'block',
+                                    width: `${spacing.openIconWidth}px`,
+                                    height: `${spacing.openIconHeight}px`,
+                                    marginBottom: spacing.isMobile ? '3px' : '0'
+                                  }}
+                                />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
                   </div>
-
-
                 </>
               ) : (
                 <div className="flex items-center justify-center h-[12.5rem] md:h-[30.1875rem] bg-gray-200">
@@ -1624,7 +1862,16 @@ export default function VideoList({ onFullscreenChange }) {
           >
             <Carousel
               videos={videos}
-              onSelectVideo={setSelectedVideo}
+              onSelectVideo={(video) => {
+                if (video?.id === selectedVideo?.id) return;
+                setShowTransitionOverlay(true);
+                setSelectedVideo(video); // Nouvelle vidéo tout de suite pour qu’elle se charge sous l’overlay
+                if (transitionOverlayTimeoutRef.current) clearTimeout(transitionOverlayTimeoutRef.current);
+                transitionOverlayTimeoutRef.current = setTimeout(() => {
+                  setShowTransitionOverlay(false);
+                  transitionOverlayTimeoutRef.current = null;
+                }, 450);
+              }}
               selectedVideo={selectedVideo}
             />
           </div>
