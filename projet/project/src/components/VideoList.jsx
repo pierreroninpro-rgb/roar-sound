@@ -24,9 +24,6 @@ const REFERENCE_VALUES = {
   }
 };
 
-// Mobile uniquement : au-dessus de ce ratio (ex. 1.65), pas de bandes noires — pour exclure les vidéos les plus larges (16:9 = 1.78)
-const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.75;
-
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -1175,7 +1172,7 @@ export default function VideoList({ onFullscreenChange }) {
                       bottom: isFullscreen ? '0' : undefined,
                       // Même logique mobile et desktop : portrait = transparent, paysage = noir ; en mobile uniquement quand il y a des bandes sur les côtés (leftOffset > 0)
                       backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1 && videoAspectRatio <= MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO ? '#000' : 'transparent')
+                        ? 'transparent'
                         : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
@@ -1205,7 +1202,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1 && videoAspectRatio <= MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO ? '#000' : 'transparent')
+                          ? 'transparent'
                           : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
