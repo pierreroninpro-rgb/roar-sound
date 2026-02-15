@@ -1170,10 +1170,10 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : bandes noires uniquement pour format "Giveon" (intermédiaire : ratio entre 1.15 et 1.65, avec bandes sur les côtés)
+                      // Mobile : bandes noires uniquement pour format intermédiaire (ratio entre 1.15 et 1.9, avec bandes sur les côtés)
                       // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
                       backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.65 ? '#000' : 'transparent')
+                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.9 ? '#000' : 'transparent')
                         : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
@@ -1203,7 +1203,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.65 ? '#000' : 'transparent')
+                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.9 ? '#000' : 'transparent')
                           : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
