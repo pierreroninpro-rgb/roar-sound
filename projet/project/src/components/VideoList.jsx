@@ -1941,7 +1941,7 @@ export default function VideoList({ onFullscreenChange }) {
                 setShowTransitionOverlay(true);
                 setSelectedVideo(video); // Nouvelle vidéo tout de suite pour qu’elle se charge sous l’overlay
                 if (transitionOverlayTimeoutRef.current) clearTimeout(transitionOverlayTimeoutRef.current);
-                const overlayDurationMs = spacing.isMobile ? 550 : 450; // Plus long en desktop pour masquer bandes noires au passage paysage → portrait
+                const overlayDurationMs = spacing.isMobile ? 510 : 450; // Plus long en desktop pour masquer bandes noires au passage paysage → portrait
                 transitionOverlayTimeoutRef.current = setTimeout(() => {
                   setShowTransitionOverlay(false);
                   transitionOverlayTimeoutRef.current = null;
