@@ -40,6 +40,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
   const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0, widthPx: null }); // widthPx = largeur visible en px (pour éligibilité bandes noires mobile)
+  const [mobileVideoContainerHeightPx, setMobileVideoContainerHeightPx] = useState(0); // Hauteur réelle du conteneur (mobile) pour même rendu Safari/Chrome/Ecosia
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
@@ -497,15 +498,23 @@ export default function VideoList({ onFullscreenChange }) {
     setIsSafariMobile(isIOS && !isChromeIOS);
   }, []);
 
-  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
+  // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo + hauteur conteneur pour mode cover mobile (même rendu tous navigateurs)
   const calculateVisibleVideoDimensions = () => {
     if (!videoContainerRef.current || isFullscreen) {
       setVisibleVideoDimensions({ width: '100%', leftOffset: 0, widthPx: null });
+      setMobileVideoContainerHeightPx(0);
       return;
     }
 
     const containerWidth = videoContainerRef.current.offsetWidth;
     const containerHeight = videoContainerRef.current.offsetHeight;
+
+    // Mobile + paysage : mémoriser la hauteur réelle du conteneur pour forcer les dimensions du wrapper (Safari = Chrome = Ecosia)
+    if (spacing.isMobile && videoAspectRatio >= 1) {
+      setMobileVideoContainerHeightPx(containerHeight);
+    } else {
+      setMobileVideoContainerHeightPx(0);
+    }
     const containerRatio = containerWidth / containerHeight;
     const videoRatio = videoAspectRatio;
 
@@ -534,7 +543,7 @@ export default function VideoList({ onFullscreenChange }) {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, isFullscreen]);
+  }, [videoAspectRatio, spacing.videoHeight, spacing.videoHeightPercent, spacing.isMobile, isFullscreen]);
 
   // Une seule fonction : demander à Vimeo de play ou pause via l'API @vimeo/player.
   // Sur mobile : pas d'await avant play() pour garder le geste utilisateur (1 tap = 1 play). Décision sur isPlaying. Unmute 50ms après play() pour le son.
@@ -1202,10 +1211,9 @@ export default function VideoList({ onFullscreenChange }) {
                         backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
                         ...(!isFullscreen && (spacing.isMobile && videoAspectRatio >= 1
                           ? {
-                              height: '100%',
-                              width: 'auto',
+                              height: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx}px` : '100%',
+                              width: mobileVideoContainerHeightPx ? `${mobileVideoContainerHeightPx * videoAspectRatio}px` : 'auto',
                               maxWidth: 'none',
-                              aspectRatio: videoAspectRatio,
                               position: 'absolute',
                               left: '50%',
                               top: 0,
