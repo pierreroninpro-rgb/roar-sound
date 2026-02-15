@@ -24,6 +24,10 @@ const REFERENCE_VALUES = {
   }
 };
 
+// Mobile : bandes noires uniquement si la largeur visible de la vidéo (px) est dans cette plage — à toi d'ajuster les valeurs
+const MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MIN_PX = 150;
+const MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MAX_PX = 300;
+
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -39,7 +43,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [fullscreenVideoDimensions, setFullscreenVideoDimensions] = useState({ width: '100vw', height: '100vh' }); // Dimensions pour letterboxing en plein écran
   const [isDraggingProgressState, setIsDraggingProgressState] = useState(false); // État pour le drag du curseur (pour re-render)
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9); // Ratio par défaut 16:9 (paysage)
-  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0 }); // Largeur visible vidéo pour navbar desktop
+  const [visibleVideoDimensions, setVisibleVideoDimensions] = useState({ width: '100%', leftOffset: 0, widthPx: null }); // widthPx = largeur visible en px (pour éligibilité bandes noires mobile)
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay fond page pendant 0.3s au changement de vidéo (masque transition paysage/portrait)
   const transitionOverlayTimeoutRef = useRef(null);
@@ -433,7 +437,7 @@ export default function VideoList({ onFullscreenChange }) {
                       visibleWidth = cw;
                       leftOffset = 0;
                     }
-                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
                   }
                 });
               }
@@ -462,7 +466,7 @@ export default function VideoList({ onFullscreenChange }) {
                     visibleWidth = cw;
                     leftOffset = 0;
                   }
-                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+                  setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
                 }
               });
             }
@@ -500,7 +504,7 @@ export default function VideoList({ onFullscreenChange }) {
   // Calculer la largeur visible de la vidéo (zone sans bandes) pour aligner la navbar sur la vidéo
   const calculateVisibleVideoDimensions = () => {
     if (!videoContainerRef.current || isFullscreen) {
-      setVisibleVideoDimensions({ width: '100%', leftOffset: 0 });
+      setVisibleVideoDimensions({ width: '100%', leftOffset: 0, widthPx: null });
       return;
     }
 
@@ -512,7 +516,7 @@ export default function VideoList({ onFullscreenChange }) {
     let visibleWidth, leftOffset;
 
     if (containerRatio > videoRatio) {
-      // Container plus large que la vidéo -> bandes noires sur les côtés
+      // Container plus large que la vidéo -> bandes noires sur les côtés (pillarbox)
       visibleWidth = containerHeight * videoRatio;
       leftOffset = (containerWidth - visibleWidth) / 2;
     } else {
@@ -521,7 +525,7 @@ export default function VideoList({ onFullscreenChange }) {
       leftOffset = 0;
     }
 
-    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset });
+    setVisibleVideoDimensions({ width: `${visibleWidth}px`, leftOffset, widthPx: visibleWidth });
   };
 
   // Recalculer les dimensions visibles quand le ratio ou la taille change
@@ -1170,10 +1174,10 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : bandes noires uniquement pour format intermédiaire (ratio entre 1.15 et 1.9, avec bandes sur les côtés)
+                      // Mobile : bandes noires uniquement si bandes sur les côtés (leftOffset > 0) ET largeur visible dans la plage définie (MOBILE_BLACK_BANDS_*)
                       // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
                       backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.9 ? '#000' : 'transparent')
+                        ? (visibleVideoDimensions.leftOffset > 0 && visibleVideoDimensions.widthPx != null && visibleVideoDimensions.widthPx >= MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MIN_PX && visibleVideoDimensions.widthPx <= MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MAX_PX ? '#000' : 'transparent')
                         : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
@@ -1203,7 +1207,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= 1.15 && videoAspectRatio <= 1.9 ? '#000' : 'transparent')
+                          ? (visibleVideoDimensions.leftOffset > 0 && visibleVideoDimensions.widthPx != null && visibleVideoDimensions.widthPx >= MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MIN_PX && visibleVideoDimensions.widthPx <= MOBILE_BLACK_BANDS_VISIBLE_WIDTH_MAX_PX ? '#000' : 'transparent')
                           : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
