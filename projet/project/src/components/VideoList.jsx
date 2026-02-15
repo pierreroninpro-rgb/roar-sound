@@ -24,11 +24,6 @@ const REFERENCE_VALUES = {
   }
 };
 
-// Mobile : bandes noires si bandes sur les côtés (leftOffset > 0) ET aspect ratio de la vidéo dans cette plage — propre à chaque vidéo (pas au conteneur)
-// Exemples : 9:16 portrait = 0.56, 1:1 carré = 1, 4:3 = 1.33, 16:9 = 1.78
-const MOBILE_BLACK_BANDS_MIN_ASPECT_RATIO = 1.0;   // en dessous = pas de bandes (portrait, carré étroit)
-const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.77;   // au-dessus = pas de bandes (vidéos plus larges type 16:9)
-
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -1175,10 +1170,9 @@ export default function VideoList({ onFullscreenChange }) {
                       left: isFullscreen ? '0' : undefined,
                       right: isFullscreen ? '0' : undefined,
                       bottom: isFullscreen ? '0' : undefined,
-                      // Mobile : bandes noires si bandes sur les côtés (leftOffset > 0) ET aspect ratio entre MIN et MAX (propre à chaque vidéo)
-                      // Desktop : pas de fond noir pour les vidéos portrait ; le reste inchangé
+                      // Même logique mobile et desktop : portrait = transparent, paysage = noir ; en mobile uniquement quand il y a des bandes sur les côtés (leftOffset > 0)
                       backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                        ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= MOBILE_BLACK_BANDS_MIN_ASPECT_RATIO && videoAspectRatio <= MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO ? '#000' : 'transparent')
+                        ? (visibleVideoDimensions.leftOffset > 0 ? (videoAspectRatio < 1 ? 'transparent' : '#000') : 'transparent')
                         : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                       display: 'flex',
                       alignItems: 'center',
@@ -1208,7 +1202,7 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (spacing.isMobile
-                          ? (visibleVideoDimensions.leftOffset > 0 && videoAspectRatio >= MOBILE_BLACK_BANDS_MIN_ASPECT_RATIO && videoAspectRatio <= MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO ? '#000' : 'transparent')
+                          ? (visibleVideoDimensions.leftOffset > 0 ? (videoAspectRatio < 1 ? 'transparent' : '#000') : 'transparent')
                           : (videoAspectRatio < 1 ? 'transparent' : '#000')),
                         ...(!isFullscreen && {
                           width: '100%',
