@@ -27,7 +27,7 @@ const REFERENCE_VALUES = {
 // Mobile : bandes noires si bandes sur les côtés (leftOffset > 0) ET aspect ratio de la vidéo dans cette plage — propre à chaque vidéo (pas au conteneur)
 // Exemples : 9:16 portrait = 0.56, 1:1 carré = 1, 4:3 = 1.33, 16:9 = 1.78
 const MOBILE_BLACK_BANDS_MIN_ASPECT_RATIO = 1.0;   // en dessous = pas de bandes (portrait, carré étroit)
-const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.5;   // au-dessus = pas de bandes (vidéos plus larges type 16:9)
+const MOBILE_BLACK_BANDS_MAX_ASPECT_RATIO = 1.77;   // au-dessus = pas de bandes (vidéos plus larges type 16:9)
 
 export default function VideoList({ onFullscreenChange }) {
   const [videos, setVideos] = useState([]);
