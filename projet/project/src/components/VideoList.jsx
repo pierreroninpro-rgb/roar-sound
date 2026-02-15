@@ -1200,15 +1200,28 @@ export default function VideoList({ onFullscreenChange }) {
                     <div
                       style={{
                         backgroundColor: isFullscreen ? '#000' : (videoAspectRatio < 1 ? 'transparent' : '#000'),
-                        ...(!isFullscreen && {
-                          width: '100%',
-                          maxWidth: '100%',
-                          height: 'auto',
-                          maxHeight: '100%',
-                          aspectRatio: videoAspectRatio,
-                          position: 'relative',
-                          flexShrink: 0
-                        }),
+                        ...(!isFullscreen && (spacing.isMobile && videoAspectRatio >= 1
+                          ? {
+                              height: '100%',
+                              width: 'auto',
+                              maxWidth: 'none',
+                              aspectRatio: videoAspectRatio,
+                              position: 'absolute',
+                              left: '50%',
+                              top: 0,
+                              transform: 'translateX(-50%)',
+                              flexShrink: 0
+                            }
+                          : {
+                              width: '100%',
+                              maxWidth: '100%',
+                              height: 'auto',
+                              maxHeight: '100%',
+                              aspectRatio: videoAspectRatio,
+                              position: 'relative',
+                              flexShrink: 0
+                            }
+                        )),
                         ...(isFullscreen && {
                           width: '100%',
                           height: '100%',
