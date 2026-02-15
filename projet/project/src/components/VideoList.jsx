@@ -1460,8 +1460,16 @@ export default function VideoList({ onFullscreenChange }) {
                               : 'max(1rem, env(safe-area-inset-right, 0px))')
                             : undefined,
                           display: 'flex',
+                          WebkitBoxAlign: 'center',
+                          WebkitAlignItems: 'center',
+                          MozBoxAlign: 'center',
+                          msFlexAlign: 'center',
                           alignItems: 'center',
-                          gap: spacing.isMobile ? (visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem') : '0.5rem',
+                          gap: spacing.isMobile ? undefined : '0.5rem',
+                          WebkitBoxPack: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
+                          WebkitJustifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
+                          MozBoxPack: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
+                          msFlexPack: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           justifyContent: visibleVideoDimensions.leftOffset > 0 ? 'center' : undefined,
                           position: 'absolute',
                           bottom: '4px',
@@ -1494,24 +1502,35 @@ export default function VideoList({ onFullscreenChange }) {
                         onMouseEnter={handleNavbarMouseEnter}
                         onMouseLeave={handleNavbarMouseLeave}
                       >
-                        {/* Wrapper mobile : vidéo étroite = space-between + décalage à gauche pour tout voir */}
+                        {/* Wrapper mobile : même design partout (marginRight au lieu de gap + préfixes Safari/Firefox) */}
                         {spacing.isMobile ? (
                           <div
                             style={{
                               display: 'flex',
+                              WebkitBoxAlign: 'center',
+                              WebkitAlignItems: 'center',
+                              MozBoxAlign: 'center',
+                              msFlexAlign: 'center',
                               alignItems: 'center',
-                              gap: visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem',
                               minWidth: visibleVideoDimensions.leftOffset > 0 ? 0 : 'min-content',
+                              WebkitBoxFlex: 1,
+                              WebkitFlex: '1 1 auto',
+                              MozBoxFlex: 1,
+                              msFlex: '1 1 auto',
                               flex: '1 1 auto',
                               minHeight: '32px',
                               width: '100%',
                               ...(visibleVideoDimensions.leftOffset > 0 && {
+                                WebkitBoxPack: 'justify',
+                                WebkitJustifyContent: 'space-between',
+                                MozBoxPack: 'justify',
+                                msFlexPack: 'justify',
                                 justifyContent: 'space-between',
                                 marginLeft: isSafariMobile ? '-4px' : '-6px'
                               })
                             }}
                           >
-                            {/* Icône PAUSE/PLAY - mobile : en vidéo étroite 10% plus petit */}
+                            {/* Icône PAUSE/PLAY - mobile (marginRight = gap pour Firefox) */}
                             <div
                               onClick={async (e) => {
                                 e.stopPropagation();
@@ -1529,13 +1548,19 @@ export default function VideoList({ onFullscreenChange }) {
                               style={{
                                 cursor: 'pointer',
                                 display: 'flex',
+                                WebkitBoxAlign: 'center',
+                                WebkitAlignItems: 'center',
                                 alignItems: 'center',
+                                WebkitBoxPack: 'center',
+                                WebkitJustifyContent: 'center',
                                 justifyContent: 'center',
+                                WebkitFlexShrink: 0,
                                 flexShrink: 0,
                                 width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
                                 height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
                                 minWidth: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
-                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? 25 : 28,
+                                marginRight: visibleVideoDimensions.leftOffset > 0 ? '0.25rem' : '1rem'
                               }}
                             >
                               <img
@@ -1550,13 +1575,16 @@ export default function VideoList({ onFullscreenChange }) {
                               />
                             </div>
 
-                            {/* Barre de progression - mobile : en vidéo étroite encore 10% plus petite ; Safari iOS : -15% de plus */}
+                            {/* Barre de progression - mobile (marginRight = gap pour Firefox) */}
                             <div
                               className="relative flex-1 flex items-center cursor-pointer rounded-full overflow-visible"
                               style={{
                                 minWidth: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 47 : 63) : 0,
+                                WebkitBoxFlex: 1,
+                                WebkitFlex: '1 1 0%',
                                 flex: '1 1 0%',
-                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 14 : 20) : 32
+                                minHeight: visibleVideoDimensions.leftOffset > 0 ? (isSafariMobile ? 14 : 20) : 32,
+                                marginRight: visibleVideoDimensions.leftOffset === 0 ? '1rem' : '0.25rem'
                               }}
                               onClick={async (e) => {
                                 if (isDraggingProgressState || seekedFromTouchRef.current || justFinishedDragRef.current) return;
@@ -1583,13 +1611,14 @@ export default function VideoList({ onFullscreenChange }) {
                                   className="absolute top-0 left-0 h-full bg-white rounded-full"
                                   style={{
                                     width: `${progress}%`,
-                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
+                                    transition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out',
+                                    WebkitTransition: isDraggingProgressState ? 'none' : 'all 0.1s ease-out'
                                   }}
                                 />
                               </div>
                             </div>
 
-                            {/* Icône MUTE/UNMUTE - mobile : affichée uniquement quand la vidéo est large (pas de bandes sur les côtés) */}
+                            {/* Icône MUTE/UNMUTE - mobile (marginRight = gap pour Firefox) */}
                             {visibleVideoDimensions.leftOffset === 0 && (
                               <div
                                 onClick={(e) => {
@@ -1604,13 +1633,19 @@ export default function VideoList({ onFullscreenChange }) {
                                 style={{
                                   cursor: 'pointer',
                                   display: 'flex',
+                                  WebkitBoxAlign: 'center',
+                                  WebkitAlignItems: 'center',
                                   alignItems: 'center',
+                                  WebkitBoxPack: 'center',
+                                  WebkitJustifyContent: 'center',
                                   justifyContent: 'center',
+                                  WebkitFlexShrink: 0,
                                   flexShrink: 0,
                                   width: '36px',
                                   height: '36px',
                                   minWidth: '36px',
-                                  minHeight: '36px'
+                                  minHeight: '36px',
+                                  marginRight: '1rem'
                                 }}
                               >
                                 <img
@@ -1621,7 +1656,7 @@ export default function VideoList({ onFullscreenChange }) {
                               </div>
                             )}
 
-                            {/* Bouton Fullscreen - mobile : en vidéo étroite 10% plus petit */}
+                            {/* Bouton Fullscreen - mobile (pas de marginRight, dernier élément) */}
                             {!isFullscreen && (
                               <button
                                 type="button"
@@ -1638,6 +1673,7 @@ export default function VideoList({ onFullscreenChange }) {
                                 style={{
                                   pointerEvents: 'auto',
                                   padding: '0.25rem',
+                                  WebkitFlexShrink: 0,
                                   flexShrink: 0,
                                   width: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
                                   height: visibleVideoDimensions.leftOffset > 0 ? '25px' : '28px',
