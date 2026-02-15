@@ -604,12 +604,13 @@ export default function VideoList({ onFullscreenChange }) {
         setIsFullscreen(false);
         if (onFullscreenChange) onFullscreenChange(false);
       } else {
-        // Mobile : priorité au plein écran Vimeo (lecteur + interface Vimeo). Sinon desktop ou fallback.
+        // **Mobile : fullscreen Vimeo en instantané** (player si prêt, sinon iframe tout de suite — pas d’attente)
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
           (window.innerWidth <= 820);
 
         if (isMobileDevice && videoRef.current) {
-          // 1) API Player Vimeo si déjà prête
+          const iframe = videoRef.current;
+          // 1) API Player Vimeo si déjà prête (sans attendre)
           if (playerRef.current) {
             try {
               await playerRef.current.requestFullscreen();
@@ -618,9 +619,8 @@ export default function VideoList({ onFullscreenChange }) {
               console.error("Mobile Vimeo fullscreen error:", err);
             }
           }
-          // 2) Sinon fullscreen de l’iframe (contenu Vimeo) même si le Player n’est pas encore prêt
+          // 2) Sinon fullscreen de l’iframe immédiatement (iframe déjà dans le DOM = pas d’attente)
           try {
-            const iframe = videoRef.current;
             if (iframe.requestFullscreen) {
               await iframe.requestFullscreen();
             } else if (iframe.webkitRequestFullscreen) {
@@ -638,7 +638,7 @@ export default function VideoList({ onFullscreenChange }) {
           }
         }
 
-        // **Desktop ou fallback mobile (si Vimeo a échoué) : plein écran via document**
+        // **Desktop ou fallback mobile : plein écran via document**
         // 1) Dimensions dès maintenant pour éviter un second reflow (flash) au passage fullscreen, surtout quand la vidéo est en pause.
         const ratio = videoAspectRatioRef.current || videoAspectRatio || 16 / 9;
         const screenW = window.innerWidth;
