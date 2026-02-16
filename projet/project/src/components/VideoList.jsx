@@ -1365,6 +1365,30 @@ export default function VideoList({ onFullscreenChange }) {
                       }}
                     />
 
+                    {/* Indication play centrée (mobile uniquement, hors fullscreen) : visible en pause, masquée pendant la lecture */}
+                    {spacing.isMobile && !isFullscreen && !isPlaying && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 11,
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        <img
+                          src="/images/middleplay.png"
+                          alt=""
+                          style={{ width: '30px', height: '30px', objectFit: 'contain', opacity: 0.5 }}
+                        />
+                      </div>
+                    )}
+
                     {/* Contrôles plein écran : à l'intérieur du conteneur avec z-index élevé au-dessus des bandes noires */}
                     {isFullscreen && (
                       <div
