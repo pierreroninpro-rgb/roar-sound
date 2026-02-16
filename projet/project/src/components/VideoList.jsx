@@ -44,7 +44,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [mobileCoverScale, setMobileCoverScale] = useState(1); // Zoom "cover" 16:9 en mobile pour éviter les bandes noires
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay au changement de vidéo (mobile 450ms, desktop 700ms pour masquer bandes paysage→portrait)
-  const [mobileHidingPlayLoader, setMobileHidingPlayLoader] = useState(false); // Sur mobile : overlay qui masque le loader Vimeo entre tap play et événement "play"
+  const [mobileHideMiddlePlayOnTap, setMobileHideMiddlePlayOnTap] = useState(false); // Mobile : masquer middleplay dès le tap (avant l'événement play)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
@@ -343,7 +343,7 @@ export default function VideoList({ onFullscreenChange }) {
   useEffect(() => {
     if (videoRef.current && selectedVideo) {
       setProgress(0);
-      setMobileHidingPlayLoader(false);
+      setMobileHideMiddlePlayOnTap(false);
       progressRef.current = 0;
       setVideoAspectRatio(16 / 9);
       setVideoAspectRatioKnown(false); // Pas de fond noir tant qu'on ne connaît pas le ratio (évite bandes sur portrait)
@@ -374,7 +374,7 @@ export default function VideoList({ onFullscreenChange }) {
 
           // ——— Événements Vimeo : on met à jour l'UI uniquement ———
           playerRef.current.on("play", () => {
-            setMobileHidingPlayLoader(false);
+            setMobileHideMiddlePlayOnTap(false);
             setIsPlaying(true);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             if (window.innerWidth > 820) {
@@ -384,11 +384,12 @@ export default function VideoList({ onFullscreenChange }) {
             }
           });
           playerRef.current.on("pause", () => {
-            setMobileHidingPlayLoader(false);
+            setMobileHideMiddlePlayOnTap(false);
             setIsPlaying(false);
             setShowControls(true);
           });
           playerRef.current.on("ended", () => {
+            setMobileHideMiddlePlayOnTap(false);
             setIsPlaying(false);
             setShowControls(true);
           });
@@ -1336,21 +1337,6 @@ export default function VideoList({ onFullscreenChange }) {
                         title={selectedVideo.title}
                       />
                     </div>
-                    {/* Sur mobile : overlay qui masque le loader Vimeo entre le tap play et l'événement "play" */}
-                    {spacing.isMobile && !isFullscreen && mobileHidingPlayLoader && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: '#000',
-                          zIndex: 5,
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    )}
                     {/* Overlay : sur mobile (hors fullscreen) on laisse tout à l'interface Vimeo ; sur desktop/fullscreen on capture clic pour play/pause */}
                     <div
                       onClick={async (e) => {
@@ -1359,7 +1345,7 @@ export default function VideoList({ onFullscreenChange }) {
                         const onMobile = window.innerWidth <= 820;
                         if (onMobile || e.target === e.currentTarget) {
                           e.preventDefault();
-                          if (onMobile) setMobileHidingPlayLoader(true); // Masque le loader Vimeo jusqu'à "play"
+                          if (onMobile) setMobileHideMiddlePlayOnTap(true); // middleplay disparaît tout de suite
                           await handlePlayPause();
                         }
                       }}
@@ -1370,7 +1356,7 @@ export default function VideoList({ onFullscreenChange }) {
                         e.preventDefault();
                         if (onMobile) {
                           playPauseHandledByTouchRef.current = true;
-                          setMobileHidingPlayLoader(true); // Masque le loader Vimeo jusqu'à "play"
+                          setMobileHideMiddlePlayOnTap(true); // middleplay disparaît tout de suite
                         }
                         await handlePlayPause();
                         if (onMobile) setTimeout(() => { playPauseHandledByTouchRef.current = false; }, 400);
@@ -1388,8 +1374,8 @@ export default function VideoList({ onFullscreenChange }) {
                       }}
                     />
 
-                    {/* Indication play centrée (mobile uniquement, hors fullscreen) : visible en pause, masquée pendant la lecture */}
-                    {spacing.isMobile && !isFullscreen && !isPlaying && (
+                    {/* Indication play centrée (mobile uniquement, hors fullscreen) : disparaît dès le clic, revient au pause */}
+                    {spacing.isMobile && !isFullscreen && !isPlaying && !mobileHideMiddlePlayOnTap && (
                       <div
                         style={{
                           position: 'absolute',
