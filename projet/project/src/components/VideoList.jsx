@@ -45,6 +45,7 @@ export default function VideoList({ onFullscreenChange }) {
   const [isSafariMobile, setIsSafariMobile] = useState(false); // Safari iOS (pour ajuster la barre de progression)
   const [showTransitionOverlay, setShowTransitionOverlay] = useState(false); // Overlay au changement de vidéo (mobile 450ms, desktop 700ms pour masquer bandes paysage→portrait)
   const [mobileHideMiddlePlayOnTap, setMobileHideMiddlePlayOnTap] = useState(false); // Mobile : masquer middleplay dès le tap (avant l'événement play)
+  const [hasVideoBeenStarted, setHasVideoBeenStarted] = useState(false); // Mobile : n'afficher la barre de contrôles qu'une fois la vidéo lancée (play ou pause)
   const transitionOverlayTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const playerRef = useRef(null);
@@ -344,6 +345,7 @@ export default function VideoList({ onFullscreenChange }) {
     if (videoRef.current && selectedVideo) {
       setProgress(0);
       setMobileHideMiddlePlayOnTap(false);
+      setHasVideoBeenStarted(false);
       progressRef.current = 0;
       setVideoAspectRatio(16 / 9);
       setVideoAspectRatioKnown(false); // Pas de fond noir tant qu'on ne connaît pas le ratio (évite bandes sur portrait)
@@ -375,6 +377,7 @@ export default function VideoList({ onFullscreenChange }) {
           // ——— Événements Vimeo : on met à jour l'UI uniquement ———
           playerRef.current.on("play", () => {
             setMobileHideMiddlePlayOnTap(false);
+            setHasVideoBeenStarted(true);
             setIsPlaying(true);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             if (window.innerWidth > 820) {
@@ -1537,11 +1540,11 @@ export default function VideoList({ onFullscreenChange }) {
                       </div>
                     )}
 
-                    {/* Navbar en bas - Mode normal : largeur = largeur visible de la vidéo (mobile + desktop) */}
+                    {/* Navbar en bas - Mode normal : largeur = largeur visible de la vidéo (mobile + desktop) ; mobile : visible seulement une fois la vidéo lancée */}
                     {!isFullscreen && (
                       <div
                         data-navbar
-                        className={`${(spacing.isMobile || showControls || !isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'}`}
+                        className={`${(showControls || !isPlaying || isHovering) && (!spacing.isMobile || hasVideoBeenStarted) ? 'opacity-100' : 'opacity-0'}`}
                         style={{
                           padding: spacing.isMobile ? undefined : '0.1rem 1rem',
                           paddingTop: spacing.isMobile ? '0.1rem' : undefined,
@@ -1586,7 +1589,7 @@ export default function VideoList({ onFullscreenChange }) {
                           }),
                           transition: 'opacity 0.3s ease-in-out',
                           zIndex: 20,
-                          pointerEvents: 'auto',
+                          pointerEvents: (spacing.isMobile && !hasVideoBeenStarted) ? 'none' : 'auto',
                           fontFamily: "'Helvetica', 'Arial', sans-serif",
                           boxSizing: 'border-box'
                         }}
