@@ -1393,7 +1393,7 @@ export default function VideoList({ onFullscreenChange }) {
                         <img
                           src="/images/middleplay.png"
                           alt=""
-                          style={{ width: '30px', height: '30px', objectFit: 'contain', opacity: 0.5 }}
+                          style={{ width: '40px', height: '40px', objectFit: 'contain', opacity: 0.7 }}
                         />
                       </div>
                     )}
