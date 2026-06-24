@@ -383,7 +383,7 @@ git push origin main
 Pour toute question technique :
 1. Consultez la documentation (`DOCUMENTATION.md`)
 2. Consultez le guide client (`GUIDE_CLIENT.md`)
-3. Contactez votre développeur
+3. Contactez une ia
 
 ---
 
