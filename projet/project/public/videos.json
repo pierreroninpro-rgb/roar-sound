@@ -3,7 +3,7 @@
     "id": 3,
     "title": "AD Council",
     "url": "https://vimeo.com/1151588642",
-    "thumbnail": "/images/Adcouncil2.png",
+    "thumbnail": "/images/ADCOUNCIL.png",
     "soustitre": "Story Unfold",
     "description": "Original composition, sound design, audio mix"
     },
@@ -12,7 +12,7 @@
   "title": "Hermès",
   "url": "https://vimeo.com/1203911135",
   "thumbnail": "/images/hermesleverideaushort.png",
-  "soustitre": "Mystérieuses mécaniques Installation - Watches and Wonders Geneva 2026 ",
+  "soustitre": "Mystérieuses mécaniques Installation - Watches and Wonders Geneva 2026",
   "description": "Original composition, sound design, audio mix"
   },
   {
@@ -56,14 +56,6 @@
   "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 10,
-    "title": "AD Council",
-    "url": "https://vimeo.com/1151588642",
-    "thumbnail": "/images/Adcouncil2.png",
-    "soustitre": "Story Unfold",
-    "description": "Original composition, sound design, audio mix"
-    },
-  {
   "id": 8,
   "title": "Converse",
   "url": "https://vimeo.com/1151590108",
@@ -83,7 +75,7 @@
     "id": 9,
     "title": "Kansas City Chiefs",
     "url": "https://vimeo.com/1151582681",
-    "thumbnail": "/images/Citychiefs.png",
+    "thumbnail": "/images/Kansascitychief.png",
     "soustitre": "The Kingdom Heard ‘Round the World",
     "description": "Original composition, sound design, audio mix"
     }
