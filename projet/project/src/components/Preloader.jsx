@@ -116,7 +116,7 @@ const Preloader = ({ onComplete, duration = 500 }) => {
           {/* Image ROAR.jpg sans rotation */}
           <img
             src="/ROAR.jpg"
-            alt="ROAR"
+            alt="Roar"
             style={{
               width: '100%',
               height: '100%',

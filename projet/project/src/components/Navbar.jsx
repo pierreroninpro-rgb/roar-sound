@@ -57,7 +57,7 @@ export default function Navbar() {
         {/* ✅ ROAR en font-weight 450 */}
         <span className="text-[30px] md:text-[50px]" style={{
           fontWeight: 500
-        }}>ROAR </span>
+        }}>Roar </span>
         <span className="text-[16px] md:text-[32px] font-[400]">music </span>
         <span className="text-[12px] md:text-[24px] font-[400]">& </span>
         <span className="text-[16px] md:text-[32px] font-[400]">sound.</span>

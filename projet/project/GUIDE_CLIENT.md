@@ -1,6 +1,6 @@
-# 📖 Guide Client - Gestion du Contenu ROAR
+# 📖 Guide Client - Gestion du Contenu Roar
 
-Ce guide vous explique comment ajouter, modifier et organiser les vidéos de votre site ROAR.
+Ce guide vous explique comment ajouter, modifier et organiser les vidéos de votre site Roar.
 
 ---
 
@@ -299,14 +299,6 @@ src="https://player.vimeo.com/video/1234567890?autoplay=1&loop=1&muted=1&backgro
 2. Suivez les instructions du README.md pour lancer le site
 3. Vérifiez que tout fonctionne correctement
 
----
-
-## 📞 Besoin d'aide ?
-
-Si vous rencontrez des difficultés :
-1. Vérifiez que vous avez bien suivi toutes les étapes
-2. Vérifiez la syntaxe JSON avec un validateur en ligne
-3. Demander de l'aide à une IA
 
 ---
 
