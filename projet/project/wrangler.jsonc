@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "wide-db",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_id": "fcf40578-5e8e-4638-a773-a1f639940b7d",
       "migrations_dir": "migrations"
     }
   ]
