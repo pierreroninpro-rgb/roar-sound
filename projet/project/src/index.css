@@ -132,3 +132,25 @@ body::-webkit-scrollbar {
 #root::-webkit-scrollbar {
   display: none;
 }
+
+html.admin-mode,
+body.admin-mode {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+html.admin-mode::-webkit-scrollbar,
+body.admin-mode::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+#root.admin-mode {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+  background-color: #F6F6F6;
+  scrollbar-width: thin;
+}

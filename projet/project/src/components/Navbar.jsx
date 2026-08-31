@@ -54,10 +54,10 @@ export default function Navbar() {
         className="font-HelveticaNeue font-[500] text-[16px] md:text-[32px] cursor-pointer"
         style={{ fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif" }}
       >
-        {/* ✅ ROAR en font-weight 450 */}
+        {/* WIDE en font-weight 500 */}
         <span className="text-[30px] md:text-[50px]" style={{
           fontWeight: 500
-        }}>ROAR </span>
+        }}>WIDE </span>
         <span className="text-[16px] md:text-[32px] font-[400]">music </span>
         <span className="text-[12px] md:text-[24px] font-[400]">& </span>
         <span className="text-[16px] md:text-[32px] font-[400]">sound.</span>
