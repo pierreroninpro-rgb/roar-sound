@@ -1934,7 +1934,7 @@ export default function VideoList({ onFullscreenChange }) {
               )}
             </div>
 
-            {/* Infos vidéo — hauteur réservée sur mobile pour que le carrousel ne descende pas si un texte passe sur 2 lignes */}
+            {/* Infos vidéo */}
             <div
               className="flex flex-col justify-start font-HelveticaNeue font-light text-grey-dark"
               style={{
@@ -1951,15 +1951,7 @@ export default function VideoList({ onFullscreenChange }) {
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.titleFontSize}px`,
-                  marginBottom: spacing.isMobile ? undefined : '0',
-                  ...((spacing.isMobile || spacing.isTabletSmall) && {
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    lineHeight: 1.25,
-                    minHeight: '1.25em'
-                  })
+                  marginBottom: spacing.isMobile ? undefined : '0'
                 }}
               >
                 {selectedVideo?.title}
@@ -1970,16 +1962,7 @@ export default function VideoList({ onFullscreenChange }) {
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.subtitleFontSize}px`,
                   marginBottom: spacing.isMobile ? undefined : `calc(${0.65 * spacing.subtitleFontSize / 20}rem + 12px)`,
-                  marginTop: spacing.isMobile ? undefined : `${0.75 * spacing.subtitleFontSize / 20}rem`,
-                  fontStyle: 'italic',
-                  ...((spacing.isMobile || spacing.isTabletSmall) && {
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    lineHeight: 1.25,
-                    minHeight: '2.5em'
-                  })
+                  marginTop: spacing.isMobile ? undefined : `${0.75 * spacing.subtitleFontSize / 20}rem`
                 }}
               >
                 {selectedVideo?.soustitre}
@@ -1989,15 +1972,7 @@ export default function VideoList({ onFullscreenChange }) {
                 style={{
                   fontFamily: "'HelveticaNeue', 'Helvetica', 'Arial', sans-serif",
                   fontSize: spacing.isMobile ? undefined : `${spacing.descriptionFontSize}px`,
-                  marginBottom: spacing.isMobile ? 'calc(1px + 0.275vh)' : 'calc(1px + 0.275vh)',
-                  ...((spacing.isMobile || spacing.isTabletSmall) && {
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    lineHeight: 1.25,
-                    minHeight: '2.5em'
-                  })
+                  marginBottom: spacing.isMobile ? 'calc(1px + 0.275vh)' : 'calc(1px + 0.275vh)'
                 }}
               >
                 {selectedVideo?.description}

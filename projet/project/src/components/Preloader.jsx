@@ -113,10 +113,10 @@ const Preloader = ({ onComplete, duration = 500 }) => {
             transition: 'transform 0.35s ease-out, opacity 0.15s ease-out'
           }}
         >
-          {/* Image WIDE.png sans rotation */}
+          {/* Image ROAR.jpg sans rotation */}
           <img
-            src="/images/WIDE.png"
-            alt="Wide"
+            src="/ROAR.jpg"
+            alt="Roar"
             style={{
               width: '100%',
               height: '100%',

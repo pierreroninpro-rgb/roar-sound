@@ -1,43 +1,43 @@
 [
   {
-    "id": 3,
-    "title": "AD Council",
-    "url": "https://vimeo.com/1151588642",
-    "thumbnail": "/images/ADCOUNCIL.png",
-    "soustitre": "Story Unfold",
-    "description": "Original composition, sound design, audio mix"
-  },
-  {
-    "id": 2,
-    "title": "Tiffany & Co.",
-    "url": "https://vimeo.com/1151598583",
-    "thumbnail": "/images/Tiffany.png",
-    "soustitre": "Céleste bluebook 2024 | cover",
-    "description": "Original composition, sound design, audio mix "
-  },
-  {
     "id": 1,
     "title": "Hermès",
     "url": "https://vimeo.com/1203911135",
     "thumbnail": "/images/hermesleverideaushort.png",
     "soustitre": "Mystérieuses mécaniques Installation - Watches and Wonders Geneva 2026",
     "description": "Original composition, sound design, audio mix"
-  },
+    },
   {
-    "id": 4,
-    "title": "Nike",
-    "url": "https://vimeo.com/1151597309",
-    "thumbnail": "/images/Nike2.png",
-    "soustitre": "Air Mercurial | cover ",
+    "id": 3,
+    "title": "AD Council",
+    "url": "https://vimeo.com/1151588642",
+    "thumbnail": "/images/ADCOUNCIL.png",
+    "soustitre": "Story Unfold",
     "description": "Original composition, sound design, audio mix"
+    },
+  {
+  "id": 2,
+  "title": "Tiffany & Co.",
+  "url": "https://vimeo.com/1151598583",
+  "thumbnail": "/images/Tiffany.png",
+  "soustitre": "Céleste bluebook 2024 | cover",
+  "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 5,
-    "title": "Giveon Rather Be",
-    "url": "https://vimeo.com/1151594994",
-    "thumbnail": "/images/GiveonRatherBe.png",
-    "soustitre": "Rather be",
-    "description": "Sound design, audio mix"
+  "id": 4,
+  "title": "Nike",
+  "url": "https://vimeo.com/1151597309",
+  "thumbnail": "/images/Nike2.png",
+  "soustitre": "Air Mercurial | cover ",
+  "description": "Original composition, sound design, audio mix"
+  },
+  {
+  "id": 5,
+  "title": "Giveon Rather Be",
+  "url": "https://vimeo.com/1151594994",
+  "thumbnail": "/images/GiveonRatherBe.png",
+  "soustitre": "Rather be",
+  "description": "Sound design, audio mix"
   },
   {
     "id": 11,
@@ -46,22 +46,22 @@
     "thumbnail": "/images/HERMESleverrideaulivraison.png",
     "soustitre": "Mystérieuses mécaniques Installation - Watches and Wonders Geneva 2026 ",
     "description": "Original composition, sound design, audio mix"
+    },
+    {
+  "id": 7,
+  "title": "Armour X",
+  "url": "https://vimeo.com/1151599838",
+  "thumbnail": "/images/ArmourX.png",
+  "soustitre": "AX HQ Room",
+  "description": "Original composition, sound design, audio mix "
   },
   {
-    "id": 7,
-    "title": "Armour X",
-    "url": "https://vimeo.com/1151599838",
-    "thumbnail": "/images/ArmourX.png",
-    "soustitre": "AX HQ Room",
-    "description": "Original composition, sound design, audio mix "
-  },
-  {
-    "id": 8,
-    "title": "Converse",
-    "url": "https://vimeo.com/1151590108",
-    "thumbnail": "/images/Converse.png",
-    "soustitre": "Born 2 Dream. Raised a Champion",
-    "description": "Sound design, audio mix"
+  "id": 8,
+  "title": "Converse",
+  "url": "https://vimeo.com/1151590108",
+  "thumbnail": "/images/Converse.png",
+  "soustitre": "Born 2 Dream. Raised a Champion",
+  "description": "Sound design, audio mix"
   },
   {
     "id": 6,
@@ -70,13 +70,13 @@
     "thumbnail": "/images/GiveonAletter.png",
     "soustitre": "A letter.. ",
     "description": "Sound design, audio mix "
-  },
+    },
   {
     "id": 9,
     "title": "Kansas City Chiefs",
     "url": "https://vimeo.com/1151582681",
     "thumbnail": "/images/Kansascitychief.png",
-    "soustitre": "The Kingdom Heard ’Round the World",
+    "soustitre": "The Kingdom Heard ‘Round the World",
     "description": "Original composition, sound design, audio mix"
-  }
-]
+    }
+  ]
