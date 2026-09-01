@@ -12,7 +12,7 @@ function runQuery(sql) {
     'wrangler',
     'd1',
     'execute',
-    'wide-db',
+    'roar-db',
     remote ? '--remote' : '--local',
     '--command',
     sql,
